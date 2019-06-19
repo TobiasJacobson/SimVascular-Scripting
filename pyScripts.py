@@ -1,9 +1,12 @@
+# Objective: Generate simVascular paths, segmentations, lofts, and meshes in a user friendly and efficient manner
+#   -This will include boundary conditions (For now assume steady flow file)
+# Application(s): Cylindrical Models with set boundary conditions (For Now)
+
+### NOTES:
 #pathMaker(List fo 3D points, name of path, name of contour, radius)
     # Assuming points won't cross or overlap
     # Pass list of radii? In case of non-uniform vessels
     # Contour type? How to take in levelSet, splinePoly, or Polygon selections?
-
-# Application: Only cylindrical models
 
 # Function to create path and make cylindrical control points
 def makePath(pointsList, pathName, contourName, radius):
