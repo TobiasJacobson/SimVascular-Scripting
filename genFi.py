@@ -1,3 +1,7 @@
+# Objective: Generate solver.inp and presolver.svpre files in a user friendly and efficient manner
+#   -This will include boundary conditions (For now assume steady flow file)
+# Application(s): Cylindrical Models with set boundary conditions (For Now)
+
 
 #####################################################
 #                      Func Def                     #
@@ -17,7 +21,7 @@ def generateDefault():
         print('removing previously existing cylinderSim.svpre')
         os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/cylinderSim.svpre')
     if os.path.exists('./solver.inp'):
-        print('removing /solver.inp')
+        print('removing previously existing solver.inp')
         os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/solver.inp')
     ############# generate solver.inp file #############
     f = open("solver.inp", "a+") # Real case
@@ -44,25 +48,26 @@ def generateDefault():
     ############# generate filename.svpre file #############
     pre = open("cylinderSim.svpre", "a+") # Real case
     # pre = open("cylinderSim.txt", "a+") # Test case
-    preContent = ["mesh_and_adjncy_vtu mesh-complete/mesh-complete.mesh.vtu", "set_surface_id_vtp mesh-complete/mesh-complete.exterior.vtp 1", \
-    "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp 2", "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 3", \
-    "fluid_density 1.06", "fluid_viscosity 0.04", "initial_pressure 0", "initial_velocity 0.0001 0.0001 0.0001", \
-    "prescribed_velocities_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp", "bct_analytical_shape parabolic", "bct_period 1.0", \
-    "bct_point_number 2", "bct_fourier_mode_number 1", "bct_create mesh-complete/mesh-surfaces/cap_segment1.vtp cap_segment1.flow", \
-    "bct_write_dat bct.dat", "bct_write_vtp bct.vtp", "pressure_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 0", \
-    "noslip_vtp mesh-complete/walls_combined.vtp", "write_geombc geombc.dat.1", "write_restart restart.0.1"]
+    preContent = ["# Reading in mesh info", "mesh_and_adjncy_vtu ./mesh-complete/mesh-complete.mesh.vtu"," ", "# Assigning surface ID's", \
+    "set_surface_id_vtp mesh-complete/mesh-complete.exterior.vtp 1", "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp 2",
+    "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 3", " ", "# BCT Conditions", "fluid_density 1.06", "fluid_viscosity 0.04", "initial_pressure 0", \
+    "initial_velocity 0.0001 0.0001 0.0001", "bct_analytical_shape parabolic", "bct_period 1.0", "bct_point_number 2", "bct_fourier_mode_number 1"," ","bct_merge_on", \
+    "bct_create ./mesh-complete/mesh-surfaces/cap_segment1.vtp cap_segment1.flow", " ", "bct_write_dat", "bct_write_vtp", " ",  "write_geombc ./geombc.dat.1", "write_restart ./restart.0.1", \
+    " ", "# Set Boundary Conditions", "prescribed_velocities_vtp ./mesh-complete/mesh-surfaces/cap_segment1.vtp", "pressure_vtp ./mesh-complete/mesh-surfaces/cap_segment1_2.vtp 0", \
+    "noslip_vtp ./mesh-complete/walls_combined.vtp"]
+    ## "bct_write_dat bct.dat", "bct_write_vtp bct.vtp"
     for newTxt in range(len(preContent)):
         pre.write(preContent[index2] + "\n")
         index2 += 1
     ############# Altering files #############
-    print("cylinderSim.svpre && solver.inp generated sucessfully")
+    print("[cylinderSim.svpre] && [solver.inp] generated sucessfully")
     print("To alter a file, enter 'nano' followed by the name of the file you want to change") # Would use Atom but not all would have it
-    print("To see current directory contents type 'ls' ")
+    print("To see contents of the current directory type 'ls' ")
 
 
-###############################
-#             Main            #
-###############################
+#####################################################
+#                   Main                           #
+####################################################
 
 # Imports needed
 import os
