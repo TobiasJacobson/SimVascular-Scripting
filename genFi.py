@@ -1,7 +1,20 @@
 
 
 def generateDefault():
-    ############# solver.inp file gen #############
+    ############# First check whether files already exist, if so, remove them from cwd #############
+    if os.path.exists('./fileTest1.txt'):
+        print('removing fileTest1.txt')
+        os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/fileTest1.txt')
+    if os.path.exists('./fileTest.txt'):
+        print('removing fileTest.txt')
+        os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/fileTest.txt')
+    if os.path.exists('./cylinderSim.txt'):
+        print('removing cylinderSim.txt')
+        os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/cylinderSim.txt')
+    if os.path.exists('./solver.inp'):
+        print('removing /solver.inp')
+        os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/solver.inp')
+    ############# generate solver.inp file #############
     # f = open("solver.inp", "a+")
     f = open("fileTest.txt", "a+")
     fileContent = ["Density: ", "Viscosity: ", " ", "Number of Timesteps: ", "Time Step Size: ", " ", "Number of Timesteps between Restarts: ", \
@@ -23,7 +36,7 @@ def generateDefault():
         f.write(fileContent[index1] + defaultFile[index1] + "\n")
         index1 += 1
     f.close()
-    ############# .svpre file gen #############
+    ############# generate filename.svpre file #############
     # pre = open("cylinderSim.svpre", "a+")
     pre = open("cylinderSim.txt", "a+")
     preContent = ["mesh_and_adjncy_vtu mesh-complete/mesh-complete.mesh.vtu", "set_surface_id_vtp mesh-complete/mesh-complete.exterior.vtp 1", \
@@ -36,7 +49,7 @@ def generateDefault():
     for newTxt in range(len(preContent)):
         pre.write(preContent[index2] + "\n")
         index2 += 1
-    ############# Alter files #############
+    ############# Altering files #############
     userInp = raw_input('Would you like to alter either file? \n')
     if userInp == 'yes' or userInp == 'y' or userInp == "Yes":
         fileInp = raw_input("Enter the name of the file you'd like to change: [the solver.inp,  cylinderSim.svpre] \n")
@@ -49,15 +62,37 @@ def generateDefault():
                 addFile = raw_input("What will you replace it with?\n")
                 fin = open("fileTest.txt")
                 fout = open("fileTest1.txt", "wt")
+                # fin = open("solver.inp")
+                # fout = open("solver.inp1", "wt")
                 for line in fin:
                     fout.write( line.replace(alterFile, addFile) )
                 fin.close()
                 fout.close()
                 os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/fileTest.txt')
+                # os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/solver.inp')
         elif (fileInp == 'cylinderSim.svpre'):
-            print('')
+            with open('/Users/tobiasjacobson/Documents/Atom/preScripting/cylinderSim.txt') as pr:
+                content = pr.readlines()
+                for thing in content:
+                    sys.stdout.write(thing)
+                alterFile = raw_input("Which line will you change?\n")
+                addFile = raw_input("What will you replace it with?\n")
+                fin = open("cylinderSim.txt")
+                fout = open("cylinderSim1.txt", "wt")
+                # fin = open("cylinderSim.svpre")
+                # fout = open("cylinderSim1.svpre", "wt")
+                for line in fin:
+                    fout.write( line.replace(alterFile, addFile) )
+                fin.close()
+                fout.close()
+                os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/cylinderSim.txt')
+                # os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/cylinderSim.svpre')
         else:
             print('Not a valid file')
+    if userInp == 'n' or userInp == 'No' or userInp == 'n':
+        print('No alterations made')
+    else:
+        print('Not a valid input')
     pre.close()
 
 ###############################
@@ -67,8 +102,6 @@ def generateDefault():
 import os
 import fileinput
 import sys
-# os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/cylinderSim.txt')
-# os.remove('/Users/tobiasjacobson/Documents/Atom/preScripting/fileTest.txt')
-# Moving from root directory
+# Moving from root directory to desired directory
 os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting')
 generateDefault()
