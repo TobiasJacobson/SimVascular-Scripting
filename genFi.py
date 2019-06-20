@@ -48,14 +48,13 @@ def generateDefault():
     ############# generate filename.svpre file #############
     pre = open("cylinderSim.svpre", "a+") # Real case
     # pre = open("cylinderSim.txt", "a+") # Test case
-    preContent = ["# Reading in mesh info", "mesh_and_adjncy_vtu ./mesh-complete/mesh-complete.mesh.vtu"," ", "# Assigning surface ID's", \
-    "set_surface_id_vtp mesh-complete/mesh-complete.exterior.vtp 1", "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp 2",
-    "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 3", " ", "# BCT Conditions", "fluid_density 1.06", "fluid_viscosity 0.04", "initial_pressure 0", \
-    "initial_velocity 0.0001 0.0001 0.0001", "bct_analytical_shape parabolic", "bct_period 1.0", "bct_point_number 2", "bct_fourier_mode_number 1"," ","bct_merge_on", \
-    "bct_create ./mesh-complete/mesh-surfaces/cap_segment1.vtp cap_segment1.flow", " ", "bct_write_dat", "bct_write_vtp", " ",  "write_geombc ./geombc.dat.1", "write_restart ./restart.0.1", \
-    " ", "# Set Boundary Conditions", "prescribed_velocities_vtp ./mesh-complete/mesh-surfaces/cap_segment1.vtp", "pressure_vtp ./mesh-complete/mesh-surfaces/cap_segment1_2.vtp 0", \
-    "noslip_vtp ./mesh-complete/walls_combined.vtp"]
-    ## "bct_write_dat bct.dat", "bct_write_vtp bct.vtp"
+    preContent = ["mesh_and_adjncy_vtu ./mesh-complete/mesh-complete.mesh.vtu",\
+    "set_surface_id_vtp mesh-complete/walls_combined.vtp 1", "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp 2",
+    "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 3", "fluid_density 1.06", "fluid_viscosity 0.04", "initial_pressure 0", \
+    "initial_velocity 0.0001 0.0001 0.0001", "bct_analytical_shape parabolic", "bct_period 1.0", "bct_point_number 2", "bct_fourier_mode_number 1","bct_merge_on", \
+    "bct_create ./mesh-complete/mesh-surfaces/cap_segment1.vtp cap_segment1.flow", "bct_write_dat", "bct_write_vtp", "write_geombc ./geombc.dat.1", \
+    "write_restart ./restart.0.1", "write_numstart 0", "prescribed_velocities_vtp ./mesh-complete/mesh-surfaces/cap_segment1.vtp", \
+    "pressure_vtp ./mesh-complete/mesh-surfaces/cap_segment1_2.vtp 0", "noslip_vtp ./mesh-complete/walls_combined.vtp"]
     for newTxt in range(len(preContent)):
         pre.write(preContent[index2] + "\n")
         index2 += 1
