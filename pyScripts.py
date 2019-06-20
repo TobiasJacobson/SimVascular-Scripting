@@ -1,16 +1,17 @@
-# Objective: Generate simVascular paths, segmentations, lofts, and meshes in a user friendly and efficient manner
+# Objective: Generate simVascular paths, segmentations, lofts, meshes, and run preSolver, solver and post process data in a user friendly and efficient manner
 #   -This will include boundary conditions (For now assume steady flow file)
 # Application(s): Cylindrical Models with set boundary conditions (For Now)
 
 ### NOTES:
-#pathMaker(List fo 3D points, name of path, name of contour, radius)
-    # Assuming points won't cross or overlap
-    # Pass list of radii? In case of non-uniform vessels
     # Contour type? How to take in levelSet, splinePoly, or Polygon selections?
+
+#####################################################
+#                     Func Def                      #
+#####################################################
 
 # Function to create path and make cylindrical control points
 def makePath(pointsList, pathName, contourName, radius):
-    # Shortcut for function call Path.pyPath() needed when calling SimVascular functions
+    # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
     p = Path.pyPath()
 
     # Initializing path
@@ -28,13 +29,12 @@ def makePath(pointsList, pathName, contourName, radius):
     GUI.ImportPathFromRepos(pathName)
     GUI.ImportPathFromRepos(pathName,'Paths')
 
-    # Initializing variables and creating segmentations, default to circle
+    # Initializing variables and creating segmentations (Default to circle)
     Contour.SetContourKernel('Circle')
-    index = 0
     pointsLength = len(pointsList)
     contourNameList = [pathName + 'ct1', pathName + 'ct2']
 
-    #  Shortcut for function call Contour.pyContour() needed when calling SimVascular functions
+    #  Shortcut for function call Contour.pyContour(), needed when calling SimVascular functions
     c = Contour.pyContour()
 
     # Creating 2 control segmentations for caps of the cylinder
@@ -50,14 +50,32 @@ def makePath(pointsList, pathName, contourName, radius):
     c2.Create()
     c2.GetPolyData('2ctp')
 
+    ## Attempt at creating systematic list of names (cct0, cct1, cct2, etc..) for individual points along path based on  pointsList length
+    # index = 0
+    # string = 'cct'
+    # while index < (pointsLength):
+    #     string += str(index)
+    #     contourNameList.append(string)
+    #     print(contourNameList[index])
+    #     index += 1
+    #
+    # # create n number of objects based on pointsList length, adding each contour to repository
+    # index = 0
+    # while index < (pointsLength-1):
+    #     c.NewObject(contourNameList[index], pathName, index)
+    #     c.SetCtrlPtsByRadius(pointsList[index], radius)
+    #     c.Create()
+    #     index += 1
+
     # Importing contours from repository to 'Segmentations' tab in GUI
     GUI.ImportContoursFromRepos(contourName, contourNameList, pathName, 'Segmentations')
 
     return
 
+# Function to create contour
 def makeContour(pointsList, pathName, contourName, radius):
     # Creating data to loft solid
-    numSegs = 60
+    numSegs = 60 # number of segments defaulted to 60
     Geom.SampleLoop('1ctp', numSegs, '1ctps')
     Geom.SampleLoop('2ctp', numSegs, '2ctps')
     cList = ['1ctps', '2ctps']
@@ -84,7 +102,7 @@ def makeContour(pointsList, pathName, contourName, radius):
     # Adding caps to model
     VMTKUtils.Cap_with_ids('loft','fullLoft',0,0)
 
-    # Function shortcut for calling built-in functions
+    # Shortcut for function call Solid.pySolidModel(), needed when calling SimVascular functions
     s1 = Solid.pySolidModel()
 
     # Creating model
@@ -97,6 +115,7 @@ def makeContour(pointsList, pathName, contourName, radius):
     GUI.ImportPolyDataFromRepos('fullLoft')
     print('Caps added to fullLoft')
 
+# Function to generate mesh of model
 def makeMesh():
     # Meshing object
     MeshObject.SetKernel('TetGen')
@@ -112,24 +131,47 @@ def makeMesh():
     msh.GenerateMesh()
     fileName = os.getcwd() + "/cylinder.vtk"
     msh.WriteMesh(fileName)
-    msh.GetUnstructuredGrid('ug')
-    Repository.WriteVtkUnstructuredGrid("ug","ascii",fileName)
-    GUI.ImportUnstructedGridFromRepos('ug')
+    msh.GetUnstructuredGrid('Mesh')
+    Repository.WriteVtkUnstructuredGrid("Mesh","ascii",fileName)
+    GUI.ImportUnstructedGridFromRepos('Mesh')
     print('Mesh generated')
 
+# Function to run solver, preSolver, and post process data
+def runSPP():
+    # Running preSolver from created model
+    try:
+        os.system('/usr/local/sv/svsolver/2019-01-19/svpre cylinderSim.svpre')
+        print('Running preSolver')
+    except:
+        print('Unable to run preSolver')
+    # Running solver
+    try:
+        os.system('/usr/local/sv/svsolver/2019-01-19/svsolver solver.inp ')
+        print('Running solver')
+    except:
+        print('Unable to run solver')
+    # Post processing data
+    try:
+        os.system('/usr/local/sv/svsolver/2019-01-19/svpost -start 30 -stop 60 -incr 10 -vtu testcyl -all')
+        print('Post processing data')
+    except:
+        print('Unable to post process data')
+
+
+
+
+
+#####################################################
+#                   Main                           #
+####################################################
 
 # Must import to use/call simVascular executables
-from sv import *
 import os
+from sv import *
 
-# Moving from root directory
-os.chdir('/Users/tobiasjacobson/Documents/Atom')
+# Moving from root directory to directory of fileName.py
+os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
 print('Current directory: ' + os.getcwd())
-
-# # Cleaning repository
-# objs = Repository.List()
-# for name in objs:
-#     Repository.Delete(name)
 
 # Declaring list of points to be used for path
 listOfPoints = [[0.0,0.0,0.0],[10.0,10.0,10.0]]
@@ -140,3 +182,5 @@ makePath(listOfPoints, 'path1', 'segment1', 1.0)
 makeContour(listOfPoints, 'path1', 'segment1', 1.0 )
 # Creating mesh using makeMesh() function
 makeMesh()
+# Running solver, preSolver, and post process the data
+runSPP()
