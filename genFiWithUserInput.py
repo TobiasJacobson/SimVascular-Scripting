@@ -30,8 +30,8 @@ def generateDefault():
      "Maximum Number of Iterations for svLS Continuity Loop: ", "Time Integration Rule: ", "Time Integration Rho Infinity: ", "Flow Advection Form: ", \
      "Quadrature Rule on Interior: ", "Quadrature Rule on Boundary: "]
 
-    defaultFile = ["1.06", "0.04", " ", "100", "0.0004", " ", "10", "1", "1", "Velocity Based", "True", "False", " ", "True", " ", "1 2 3 4", " ", \
-     "1", "3", "16000", " ", "Implicit", "1", " ", "0.2", "True", "0.01", "3", "NS", "100", "1", "0.05", "0.4", "0.4", "1", "2", "400", "Second Order", \
+    defaultFile = ["1.06", "0.04", " ", "100", "0.0004", " ", "10", "1", "1", "Velocity Based", "True", "False", " ", "True", " ", "0 1 0 1 0 1 0 1 0 1", " ", \
+     "1", "3", "16000", " ", "Implicit", "1", " ", "0.2", "True", "0.01", "3", "NS", "100", "1", "0.05", "0.05", "0.05", "10", "15", "400", "Second Order", \
      "0.5", "Convective", "2", "3"]
     index1 = 0
     index2 = 0
@@ -42,13 +42,13 @@ def generateDefault():
     ############# generate filename.svpre file #############
     # pre = open("cylinderSim.svpre", "a+")
     pre = open("cylinderSim.txt", "a+")
-    preContent = ["mesh_and_adjncy_vtu mesh-complete/mesh-complete.mesh.vtu", "set_surface_id_vtp mesh-complete/mesh-complete.exterior.vtp 1", \
-    "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp 2", "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 3", \
-    "fluid_density 1.06", "fluid_viscosity 0.04", "initial_pressure 0", "initial_velocity 0.0001 0.0001 0.0001", \
-    "prescribed_velocities_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp", "bct_analytical_shape parabolic", "bct_period 1.0", \
-    "bct_point_number 2", "bct_fourier_mode_number 1", "bct_create mesh-complete/mesh-surfaces/cap_segment1.vtp cap_segment1.flow", \
-    "bct_write_dat bct.dat", "bct_write_vtp bct.vtp", "pressure_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 0", \
-    "noslip_vtp mesh-complete/walls_combined.vtp", "write_geombc geombc.dat.1", "write_restart restart.0.1"]
+    preContent = ["mesh_and_adjncy_vtu ./mesh-complete/mesh-complete.mesh.vtu",\
+    "set_surface_id_vtp mesh-complete/walls_combined.vtp 1", "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1.vtp 2",
+    "set_surface_id_vtp mesh-complete/mesh-surfaces/cap_segment1_2.vtp 3", "fluid_density 1.06", "fluid_viscosity 0.04", "initial_pressure 0", \
+    "initial_velocity 0.0001 0.0001 0.0001", "prescribed_velocities_vtp ./mesh-complete/mesh-surfaces/cap_segment1.vtp", \
+    "pressure_vtp ./mesh-complete/mesh-surfaces/cap_segment1_2.vtp 0", "noslip_vtp ./mesh-complete/walls_combined.vtp", "bct_analytical_shape parabolic", "bct_period 1.0", "bct_point_number 2", \
+    "bct_fourier_mode_number 1","bct_merge_on", "bct_create ./mesh-complete/mesh-surfaces/cap_segment1.vtp cap_segment1.flow", "bct_write_dat", "bct_write_vtp", "write_geombc ./geombc.dat.1", \
+    "write_restart ./restart.0.1", "write_numstart 0"]
     for newTxt in range(len(preContent)):
         pre.write(preContent[index2] + "\n")
         index2 += 1
@@ -114,6 +114,7 @@ def generateDefault():
 ###############################
 #             Main            #
 ###############################
+
 
 import os
 import fileinput
