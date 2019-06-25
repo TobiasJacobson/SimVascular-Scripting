@@ -43,11 +43,8 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
 
     # Reading in points, making note of control vs contour points
-    pointsList = [] # List of the points to be read from thecontour ID
     pointsData = []
 
-    # cCount = 0 # Count of the number of times "<contour_points>" occurs, keeps track of number of segments in a contour
-        # ---> Don't actually need this becasue contourGroup says which one to change, no need to find the middle section for alterations
 
     for iteration in inFile:
         # print iteration
@@ -63,21 +60,21 @@ def alteringStenosis(fileName, percentage, contourGroup):
         else:
             data.append(re.findall('"([^"]*)"', iteration)) # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn' where n is n number of b's following), [] indicates a set of special characters
 
-    # Takes actual integers from segment to alter
+    # Takes actual integers from segment to alter and adds to pointsData
     count = 0
     for iteration in inFile:
         # print iteration
         if "</contour_points>" in iteration:
             break
         else:
-            if count == 0:
+            if count == 0: # B/C otherwise first item in list is always a blank for some reason
                 count += 1
             else:
                 stringLine = iteration
                 pointsData.append(re.findall('"([^"]*)"', stringLine))
                 outFile.write(iteration)
 
-    # Adding rest to outFile
+    # Adding rest of inFile to outFile
     for iteration in inFile:
         # print iteration
         stringRest = iteration
@@ -85,47 +82,43 @@ def alteringStenosis(fileName, percentage, contourGroup):
         data.append(re.findall('"([^"]*)"', iteration))
 
 
-    # Alter segment size ---
-    # Checking other SVC alterations I see only mid segmentations being altered (B/c only 5 segments the stenosis occurs on the middle segment)
+    # Alter segment size based on percentage input ---
 
-    # gather current points in 4xN matrix, scale by root(factor) which is 1xN, using the numpy.matmul(),
-    # arguments are 2 arrays (matricies) and will return matrix of appropriate dimensions
-
-    # Gather points from SVC file in ---
+    # Gather points from SVC file in --- Hard code for now
     centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
     # Hard code for now
     pData = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
+
+    # List of ones to be appended to pointsData
+    onesArr = numpy.ones(43)
+
+    # Converting points data to float, removing first column b/c they only store indicies
     cFdata = numpy.array(pointsData)
     cFdata = cFdata.astype(numpy.float)
     cFdata = cFdata[:,1:]
-    #cFdata = [[None]*4]*43
-    #for i in range(43):
-    #    for x in range(3):
-    #        cFdata[i][x+1] = float(pointsData[i][x+1])
 
+    # Transpose data for matrix mult.
+    numpy.transpose(cFdata)
+    
 
-    # factor = math.sqrt(percentage/100.0)
-    # factorList = [None] * 44
-    # for i in range(43):
-        # factorList[i] = factor
-    numpy.transpose(pointsData)
-    # numpy.transpose(centerData)
-    # numpy.dot()
-    # numpy.multiply()
-    # numpy.matmul()
+    # Appending onesArr to pointsData
+    cFdata = numpy.concatenate((cFdata,onesArr[:,None]),axis=1)
+    # cFdata = numpy.c_[cFdata, onesArr]
+    print(cFdata) # Check if its been added
+
     # newPointsData = numpy.matmul(pointsData, centerData)
-    newPointsData = numpy.matmul(cFdata, centerData)
+    # newPointsData = numpy.matmul(cFdata, centerData)
 
-
+    # ---------- Checks for data ----------
     # for line in newPointsData:
-    #     print(line)
+    #     print line
 
     # for i in range(43):
     #     print pointsData[i]
-    # print('--------------')
-    for r in range(42):
-        print cFdata[r]
 
+    # for r in range(42):
+    #     print cFdata[r]
+    # -------------------------------------
     return
 
 
