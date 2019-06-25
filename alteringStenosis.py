@@ -16,6 +16,17 @@ import numpy  #as np
 #####################################################
 #                      Func Def                     #
 #####################################################
+def multiply(v, G):
+    result = []
+    for i in range(len(G[0])): #this loops through columns of the matrix
+        total = 0
+        for j in range(len(v)): #this loops through vector coordinates & rows of matrix
+            total += v[j] * G[j][i]
+        result.append(total)
+    return result
+
+
+
 def alteringStenosis(fileName, percentage, contourGroup):
     # Open .ctgr file and create new output file to read to
     inFile = open(fileName+'.ctgr', 'r')
@@ -53,40 +64,67 @@ def alteringStenosis(fileName, percentage, contourGroup):
             data.append(re.findall('"([^"]*)"', iteration)) # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn' where n is n number of b's following), [] indicates a set of special characters
 
     # Takes actual integers from segment to alter
+    count = 0
     for iteration in inFile:
         # print iteration
         if "</contour_points>" in iteration:
             break
         else:
-            stringLine = iteration
-            pointsData.append(re.findall('"([^"]*)"', stringLine))
-            outFile.write(iteration)
+            if count == 0:
+                count += 1
+            else:
+                stringLine = iteration
+                pointsData.append(re.findall('"([^"]*)"', stringLine))
+                outFile.write(iteration)
 
+    # Adding rest to outFile
     for iteration in inFile:
         # print iteration
+        stringRest = iteration
+        outFile.write(stringRest)
         data.append(re.findall('"([^"]*)"', iteration))
 
 
     # Alter segment size ---
     # Checking other SVC alterations I see only mid segmentations being altered (B/c only 5 segments the stenosis occurs on the middle segment)
 
-    # gather current points in 3xN matrix, scale by root(factor) which is 1xN, using the numpy.matmul(),
+    # gather current points in 4xN matrix, scale by root(factor) which is 1xN, using the numpy.matmul(),
     # arguments are 2 arrays (matricies) and will return matrix of appropriate dimensions
 
     # Gather points from SVC file in ---
-    # Hard coded for now
     centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
-    # Other points already collected
+    # Hard code for now
+    pData = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
+    cFdata = numpy.array(pointsData)
+    cFdata = cFdata.astype(numpy.float)
+    cFdata = cFdata[:,1:]
+    #cFdata = [[None]*4]*43
+    #for i in range(43):
+    #    for x in range(3):
+    #        cFdata[i][x+1] = float(pointsData[i][x+1])
 
-    # for line in pointsData:
-    #     print line
-    # for line in outFile:
-    #     print line
 
-    # Matric multiplication of centerData and pointsData returned to create newPointsData
-    newPointsData = numpy.matmul(pointsData, centerData)
-    for line in newPointsData:
-        print line
+    # factor = math.sqrt(percentage/100.0)
+    # factorList = [None] * 44
+    # for i in range(43):
+        # factorList[i] = factor
+    numpy.transpose(pointsData)
+    # numpy.transpose(centerData)
+    # numpy.dot()
+    # numpy.multiply()
+    # numpy.matmul()
+    # newPointsData = numpy.matmul(pointsData, centerData)
+    newPointsData = numpy.matmul(cFdata, centerData)
+
+
+    # for line in newPointsData:
+    #     print(line)
+
+    # for i in range(43):
+    #     print pointsData[i]
+    # print('--------------')
+    for r in range(42):
+        print cFdata[r]
 
     return
 
@@ -95,6 +133,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 # Importing required repos
 import sys
 import numpy  #as np
+import math
 from numpy import genfromtxt
 import pdb
 import re
