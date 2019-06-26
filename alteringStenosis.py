@@ -73,39 +73,47 @@ def alteringStenosis(fileName, percentage, contourGroup):
         data.append(re.findall('"([^"]*)"', iteration))
 
 
-    # Alter segment size based on percentage input ---
+    # Alter segment size based on percentage input -----------------
 
-    # Gather points from SVC file in --- Hard code for now
-    centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
-    # Hard code for now
-    dataMatrix = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
-
+    ################################## Creating matrix cVdataTranspose, i.e main matrix ##################################
     # List of ones to be appended to pointsData matrix
     onesArr = numpy.ones(43)
-
-    # Converting points data to float, removing first column b/c they only store indicies
+    # Converting pointsData to float, removing first column b/c they only store indicies therefore aren't needed
     cVdata = numpy.array(pointsData)
     cVdata = cVdata.astype(numpy.float)
     cVdata = cVdata[:,1:]
-
-
     # Appending onesArr to pointsData
     cVdata = numpy.concatenate((cVdata,onesArr[:,None]), axis=1)
     # cVdata = numpy.c_[cVdata, onesArr] # Another way to append onesArr
     # print(cVdata) # Check if its been added
-
     # Transpose data for matrix multiplication
     cVdataTranspose = numpy.transpose(cVdata)
     # print cVdataTranspose # Check if its been transposed correctly
+    ######################################################################################################################
+
+    ################################## Creating overal matrix of scalar, translation, and inverse translation ##################################
+    # Hard coded for now
+    centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
+    factor = math.sqrt(percentage/100.0)
+    # Creating Scalar Matrix (with scalar as percent stenosis given)
+    scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, 0, factor, 0], [0, 0, 0, 1]]
+    # Creating Translation Matrix
+    translationMatrix = [[1, 0,0, 1.90810359169811], [0, 1, 0, -10.874778040444664], [0, 0, 1, -20.961486548177369], [0, 0, 0, 1]]
+    # Creating Inverse Translation matrix
+    invTranslationMatrix = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
+    # Overall Matrix created
+    matrixMain = numpy.matmul(scalarMatrix, translationMatrix)
+    matrixMainTwo = numpy.matmul(matrixMain, invTranslationMatrix)
+    print matrixMain
+    ############################################################################################################################################
 
     # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43sx4) # Note: have to left  multiply with dataMatrix
-    newPointsData = numpy.matmul(dataMatrix, cVdataTranspose)
-    # newPointsData = numpy.matmul(cVdata, dataMatrix)
+    newPointsData = numpy.matmul(matrixMain, cVdataTranspose)
+    # newPointsData = newPointsData[:-1,:] # Removes ones from bottom of matrix
     # print newPointsData # Check if matricies have been multiplied correctly
 
-    # Scale newPointsData by factor (percent stenosis given)
-    factor = math.sqrt(percentage/100.0)
-    scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, 0, factor, 0], [0, 0, 0, 1]]
+
+    # scaledData = numpy.dot(newPointsData, scalarMatrix)
     scaledData = numpy.dot(newPointsData, scalarMatrix)
     # scaledData = numpy.multiply(newPointsData, factor)
     print scaledData
