@@ -96,7 +96,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
     centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
     factor = math.sqrt(percentage/100.0)
     # Creating Scalar Matrix (with scalar as percent stenosis given)
-    scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, 0, factor, 0], [0, 0, 0, 1]]
+    scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, factor, 0], [0, 0, 0, 1]]
     # Creating Translation Matrix
     translationMatrix = [[1, 0,0, 1.90810359169811], [0, 1, 0, -10.874778040444664], [0, 0, 1, -20.961486548177369], [0, 0, 0, 1]]
     # Creating Inverse Translation matrix
