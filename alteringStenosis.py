@@ -1,14 +1,14 @@
 # Objective: Write script to load previously existing SimVascular files and generate
 #           a stenosis percentage based on user input
-# Inputs: .ctgr file (The SVC contour section of artery)
+# Inputs: .ctgr file (The SVC contour section of artery), percent stenosis, and contour group to apply stenosis
 
-import numpy  #as np
 
 ############################
 # Structure:
 #   - Read .ctgr file && find desired contour contourGroup
 #   - Read in points from the .ctgr file, note wich are control and contour
-#   - Find efficient way to alter segment size based on percentage input. (Erica rotate to 2D, better way??) (Convex hull,  Sum(Area of triangles) but only if ordered lists, if no geometric relation resort to brute force)
+#   - Find efficient way to alter segment size based on percentage input. (Erica rotate to 2D, better way??) (Convex hull,
+#       Sum(Area of triangles) but only if ordered lists, if no geometric relation resort to brute force)
 #   - If all goes well -> Reconfigure file and run preSolver, solver and post process??????
 ############################
 
@@ -16,16 +16,6 @@ import numpy  #as np
 #####################################################
 #                      Func Def                     #
 #####################################################
-def multiply(v, G):
-    result = []
-    for i in range(len(G[0])): #this loops through columns of the matrix
-        total = 0
-        for j in range(len(v)): #this loops through vector coordinates & rows of matrix
-            total += v[j] * G[j][i]
-        result.append(total)
-    return result
-
-
 
 def alteringStenosis(fileName, percentage, contourGroup):
     # Open .ctgr file and create new output file to read to
@@ -58,7 +48,8 @@ def alteringStenosis(fileName, percentage, contourGroup):
         if "</control_points>" in iteration:
             break
         else:
-            data.append(re.findall('"([^"]*)"', iteration)) # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn' where n is n number of b's following), [] indicates a set of special characters
+            data.append(re.findall('"([^"]*)"', iteration)) # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn'
+                                                            # where n is n number of b's following), [] indicates a set of special characters
 
     # Takes actual integers from segment to alter and adds to pointsData
     count = 0
@@ -87,40 +78,44 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Gather points from SVC file in --- Hard code for now
     centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
     # Hard code for now
-    pData = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
+    dataMatrix = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
 
-    # List of ones to be appended to pointsData
+    # List of ones to be appended to pointsData matrix
     onesArr = numpy.ones(43)
 
     # Converting points data to float, removing first column b/c they only store indicies
-    cFdata = numpy.array(pointsData)
-    cFdata = cFdata.astype(numpy.float)
-    cFdata = cFdata[:,1:]
+    cVdata = numpy.array(pointsData)
+    cVdata = cVdata.astype(numpy.float)
+    cVdata = cVdata[:,1:]
 
-    # Transpose data for matrix mult.
-    numpy.transpose(cFdata)
-    
 
     # Appending onesArr to pointsData
-    cFdata = numpy.concatenate((cFdata,onesArr[:,None]),axis=1)
-    # cFdata = numpy.c_[cFdata, onesArr]
-    print(cFdata) # Check if its been added
+    cVdata = numpy.concatenate((cVdata,onesArr[:,None]), axis=1)
+    # cVdata = numpy.c_[cVdata, onesArr] # Another way to append onesArr
+    # print(cVdata) # Check if its been added
 
-    # newPointsData = numpy.matmul(pointsData, centerData)
-    # newPointsData = numpy.matmul(cFdata, centerData)
+    # Transpose data for matrix multiplication
+    cVdataTranspose = numpy.transpose(cVdata)
+    # print cVdataTranspose # Check if its been transposed correctly
 
-    # ---------- Checks for data ----------
-    # for line in newPointsData:
-    #     print line
+    # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43sx4) # Note: have to left  multiply with dataMatrix
+    newPointsData = numpy.matmul(dataMatrix, cVdataTranspose)
+    # newPointsData = numpy.matmul(cVdata, dataMatrix)
+    # print newPointsData # Check if matricies have been multiplied correctly
 
-    # for i in range(43):
-    #     print pointsData[i]
+    # Scale newPointsData by factor (percent stenosis given)
+    factor = math.sqrt(percentage/100.0)
+    scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, 0, factor, 0], [0, 0, 0, 1]]
+    scaledData = numpy.dot(newPointsData, scalarMatrix)
+    # scaledData = numpy.multiply(newPointsData, factor)
+    print scaledData
 
-    # for r in range(42):
-    #     print cFdata[r]
-    # -------------------------------------
-    return
+    return # End of function
 
+
+#####################################################
+#                   Main                           #
+####################################################
 
 
 # Importing required repos
@@ -130,7 +125,13 @@ import math
 from numpy import genfromtxt
 import pdb
 import re
-filename = "SVCTest"
-contourGroup = 2
-percentage = 60
+import math
+
+
+# Initializing data for function call
+filename = "SVCTest" # File to be read from (i.e. 0% stenosis .ctgr file)
+contourGroup = 2 # Contour group to be altered (i.e. Where stenosis is applied)
+percentage = 60 # Desired Stenosis percentage
+
+# Function call
 alteringStenosis(filename, percentage, contourGroup)
