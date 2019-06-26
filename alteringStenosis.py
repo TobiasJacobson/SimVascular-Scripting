@@ -35,7 +35,6 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Reading in points, making note of control vs contour points
     pointsData = []
 
-
     for iteration in inFile:
         # print iteration
         if "<control_points>" in iteration:
@@ -91,9 +90,11 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # print cVdataTranspose # Check if its been transposed correctly
     ######################################################################################################################
 
+
     ################################## Creating overal matrix of scalar, translation, and inverse translation ##################################
-    # Hard coded for now
+    # Hard coded center for now
     centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
+    # Setting factor based on users input
     factor = math.sqrt(percentage/100.0)
     # Creating Scalar Matrix (with scalar as percent stenosis given)
     scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, factor, 0], [0, 0, 0, 1]]
@@ -102,28 +103,27 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Creating Inverse Translation matrix
     invTranslationMatrix = [[1, 0,0, -1.90810359169811], [0, 1, 0, 10.874778040444664], [0, 0, 1, 20.961486548177369], [0, 0, 0, 1]]
     # Overall Matrix created
-    matrixMain = numpy.matmul(scalarMatrix, translationMatrix)
-    matrixMainTwo = numpy.matmul(matrixMain, invTranslationMatrix)
-    print matrixMain
+    matrixS = numpy.matmul(invTranslationMatrix, scalarMatrix)
+    matrixMain = numpy.matmul(matrixS, translationMatrix)
+    # import pdb; pdb.set_trace()
+    # print matrixMain
     ############################################################################################################################################
 
     # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43sx4) # Note: have to left  multiply with dataMatrix
     newPointsData = numpy.matmul(matrixMain, cVdataTranspose)
-    # newPointsData = newPointsData[:-1,:] # Removes ones from bottom of matrix
-    # print newPointsData # Check if matricies have been multiplied correctly
+    newPointsData = newPointsData[:-1,:] # Removes ones from bottom of matrix
+    # print newPointsData
+
+    newDataTpose = numpy.transpose(newPointsData)
+    # print newDataTpose
+
+    return # End of function alteringStenosis(x, y, z)
 
 
-    # scaledData = numpy.dot(newPointsData, scalarMatrix)
-    scaledData = numpy.dot(newPointsData, scalarMatrix)
-    # scaledData = numpy.multiply(newPointsData, factor)
-    print scaledData
-
-    return # End of function
-
-
-#####################################################
+####################################################
 #                   Main                           #
 ####################################################
+
 
 
 # Importing required repos
@@ -134,7 +134,6 @@ from numpy import genfromtxt
 import pdb
 import re
 import math
-
 
 # Initializing data for function call
 filename = "SVCTest" # File to be read from (i.e. 0% stenosis .ctgr file)
