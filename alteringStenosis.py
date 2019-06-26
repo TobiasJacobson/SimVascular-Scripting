@@ -142,3 +142,4 @@ percentage = 60 # Desired Stenosis percentage
 
 # Function call
 alteringStenosis(filename, percentage, contourGroup)
+
