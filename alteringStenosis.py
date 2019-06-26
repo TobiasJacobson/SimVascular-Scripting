@@ -1,59 +1,49 @@
 # Objective: Write script to load previously existing SimVascular files and generate
 #           a stenosis percentage based on user input
-# Inputs: .ctgr file (The SVC contour section of artery), percent stenosis, and contour group to apply stenosis
-
-
-############################
-# Structure:
-#   - Read .ctgr file && find desired contour contourGroup
-#   - Read in points from the .ctgr file, note wich are control and contour
-#   - Find efficient way to alter segment size based on percentage input. (Erica rotate to 2D, better way??) (Convex hull,
-#       Sum(Area of triangles) but only if ordered lists, if no geometric relation resort to brute force)
-#   - If all goes well -> Reconfigure file and run preSolver, solver and post process??????
-############################
-
+# Inputs: .ctgr file (The SVC contour section of the artery), percent stenosis, and contour group to apply stenosis
 
 #####################################################
 #                      Func Def                     #
 #####################################################
 
 def alteringStenosis(fileName, percentage, contourGroup):
-    # Open .ctgr file and create new output file to read to
+    # Open .ctgr file and create new output file to write to
     inFile = open(fileName+'.ctgr', 'r')
     outFile = open(fileName+str(percentage)+'.ctgr','w+')
-    data =[]
+
+
+    ###################### Reading input file and copying information until contour section is reached ######################
+
     # Iterate through given .ctgr file until desired segmentation is reached (i.e contourGroup is found)
     for seg in inFile:
-        # print seg
-        if '<contour id=\"'+str(contourGroup)+'\"' in seg:
+        if '<contour id=\"'+str(contourGroup)+'\"' in seg: # If found, break
             outFile.write(seg)
             break
         else:
-            outFile.write(seg)
+            outFile.write(seg) # Else a write tot file
 
+    # Array/Matrix to store points
+    pointsData = []
+    data =[]
 
     # Reading in points, making note of control vs contour points
-    pointsData = []
-
     for iteration in inFile:
-        # print iteration
         if "<control_points>" in iteration:
             break
         else:
             outFile.write(iteration)
 
     for iteration in inFile:
-        # print iteration
         if "</control_points>" in iteration:
             break
         else:
             data.append(re.findall('"([^"]*)"', iteration)) # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn'
                                                             # where n is n number of b's following), [] indicates a set of special characters
+    ct = int(data[-1][0])
 
     # Takes actual integers from segment to alter and adds to pointsData
     count = 0
     for iteration in inFile:
-        # print iteration
         if "</contour_points>" in iteration:
             break
         else:
@@ -62,17 +52,11 @@ def alteringStenosis(fileName, percentage, contourGroup):
             else:
                 stringLine = iteration
                 pointsData.append(re.findall('"([^"]*)"', stringLine))
-                outFile.write(iteration)
+                # outFile.write(iteration)
 
-    # Adding rest of inFile to outFile
-    for iteration in inFile:
-        # print iteration
-        stringRest = iteration
-        outFile.write(stringRest)
-        data.append(re.findall('"([^"]*)"', iteration))
+    #########################################################################################################################
 
 
-    # Alter segment size based on percentage input -----------------
 
     ################################## Creating matrix cVdataTranspose, i.e main matrix ##################################
     # List of ones to be appended to pointsData matrix
@@ -89,6 +73,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
     cVdataTranspose = numpy.transpose(cVdata)
     # print cVdataTranspose # Check if its been transposed correctly
     ######################################################################################################################
+
 
 
     ################################## Creating overal matrix of scalar, translation, and inverse translation ##################################
@@ -117,6 +102,27 @@ def alteringStenosis(fileName, percentage, contourGroup):
     newDataTpose = numpy.transpose(newPointsData)
     # print newDataTpose
 
+    # Finish writing to file
+    outFile.write('            <control_points>\n')
+    for i in xrange(ct+1):
+        dl = newDataTpose[i,:]
+        fStr = '<point id=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />\n'.format(i,dl[0],dl[1],dl[2])
+        outFile.write('                '+fStr)
+    outFile.write('            </control_points>\n')
+
+    outFile.write('            <contour_points>\n')
+    for i in xrange(ct+1, numpy.shape(newDataTpose)[0]):
+        dl = newDataTpose[i,:]
+        fStr = '<point id=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />\n'.format(i-ct-1,dl[0],dl[1],dl[2])
+        outFile.write('                '+fStr)
+    outFile.write('            </contour_points>\n')
+
+    for line in inFile:
+       outFile.write(line)
+
+    print("Created.")
+    inFile.close()
+    outFile.close()
     return # End of function alteringStenosis(x, y, z)
 
 
@@ -134,12 +140,12 @@ from numpy import genfromtxt
 import pdb
 import re
 import math
+import os.path
 
 # Initializing data for function call
-filename = "SVCTest" # File to be read from (i.e. 0% stenosis .ctgr file)
-contourGroup = 2 # Contour group to be altered (i.e. Where stenosis is applied)
-percentage = 60 # Desired Stenosis percentage
+fileInput = raw_input("Enter the name of the file to be read from: ")
+contourInput = raw_input("Enter the number of the contour you'd like to change: ")
+percentInput = raw_input("What percent stenosis are you applying: ") # Weird b/c 25 in mine = 75 applied, 75 in mine = 25 applied
 
 # Function call
-alteringStenosis(filename, percentage, contourGroup)
-
+alteringStenosis(fileInput, float(percentInput), contourInput)
