@@ -7,21 +7,35 @@
 #####################################################
 
 def alteringStenosis(fileName, percentage, contourGroup):
-    # Open .ctgr file and create new output file to write to
-    inFile = open(fileName+'.ctgr', 'r')
+    # Check if given file exists in cwd
+    try:
+        inFile = open(fileName+'.ctgr', 'r')
+    except:
+        print("Unable to open given file")
+        return
+
+    # Once input file has been validated, then create output file
     outFile = open(fileName+'-'+str(contourGroup)+'-'+str(percentage)+'.ctgr','w+')
-    print('Creating: ' + fileName + '-' + str(contourGroup) + '-' + str(percentage) + '.ctgr')
+
 
     ###################### Reading input file and copying information until contour section is reached ######################
     # Iterate through given .ctgr file until desired segmentation is reached (i.e contourGroup is found)
+    found = False
     for seg in inFile:
         if '<contour id=\"'+str(contourGroup)+'\"' in seg: # If found, break
             outFile.write(seg) # Write contour ID line to outFile
+            found = True
             break
         else:
-            outFile.write(seg) # Else a write to file
+            outFile.write(seg) # Else write to file
+    if found == False:
+        print('Segment does not exist in contour')
+        return
 
-    # Will store center data for desired segment
+    # Once segment has been validated, then print creating...
+    print('Creating: '+fileName+'-'+str(contourGroup)+'-'+str(percentage)+'.ctgr')
+
+    # Will store center data for desired segment (Needed later when scaling points)
     count = 0
     foundCenterPoints = []
 
@@ -36,41 +50,40 @@ def alteringStenosis(fileName, percentage, contourGroup):
             outFile.write(iteration)
             count += 1
 
-    # Array/Matrix to store points
+    # Array of lists to store points
     pointsData = []
-    data =[] # Not really used besides in this section...
 
-    # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn' where n is n number of b's following), [] indicates a set of special characters
     for iteration in inFile:
         if "</control_points>" in iteration:
             break
         else:
-            pointsData.append(re.findall('"([^"]*)"', iteration))
+            pointsData.append(re.findall('"([^"]*)"', iteration))  # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn'
+                                                                   # where n is n number of b's following), [] indicates a set of special characters
 
     # Stores ...
     ct = int(pointsData[-1][0])
 
-    # Takes the actual integers from segment to alter and copies them to pointsData
+    # Takes the actual integers from segment to alter and copies them to array: pointsData
     count = 0
     for iteration in inFile:
         if "</contour_points>" in iteration:
             break
         else:
-            if count == 0: # B/C otherwise first item in list is always a blank for some reason
+            if count == 0: # B/C otherwise first item in list is always a blank list for some reason
                 count += 1
             else:
                 stringLine = iteration
                 pointsData.append(re.findall('"([^"]*)"', stringLine))
-                # outFile.write(iteration) # This wrote original contour group 2 data to outfle...
+                # outFile.write(iteration) # This wrote original segment data to outfle creating a duplicate...
 
     #########################################################################################################################
 
 
     ################################## Creating matrix called cVdataTranspose, i.e main matrix #################################
-    # List of ones to be appended to pointsData matrix
-    onesArr = numpy.ones(45)
+    # List of ones to be appended to pointsData matrix for matrix multiplication
+    onesArr = numpy.ones(45) # 1x45 dimension
 
-    # Converting pointsData to type: float, removing first column b/c it only contains indicies therefore isn't needed
+    # Converting pointsData to type: float, removing first column as it only contains indicies therefore isn't needed
     cVdata = numpy.array(pointsData)
     cVdata = cVdata.astype(numpy.float)
     cVdata = cVdata[:,1:]
@@ -87,41 +100,39 @@ def alteringStenosis(fileName, percentage, contourGroup):
     ############################################################################################################################
 
 
-    ################################## Creating overal matrix of scalar, translation, and inverse translation ##################################
-    # Hard coded center for segment 2
+    ################################## Creating overall matrix combining scalar, translation, and inverse translation matricies ##################################
+    # Hard coded center for segment 2 in inital stages of code
     # centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
 
-    # Converting foundCenterPoints to floats and stored in centerData
+    # Converting foundCenterPoints to floats and storing it in centerData
     centerData = numpy.array(foundCenterPoints)
     centerData = centerData.astype(numpy.float)
-    # centerData = numpy.append(centerData, oneList)
-    print 'Center Found At: ' + str(centerData)
-    cdOne = centerData[0][0]
-    cdTwo = centerData[0][1]
-    cdThree = centerData[0][2]
-    # print cdOne
-    # print cdTwo
-    # print cdThree
+    print 'Center Found At: ' + str(centerData) # Can be used a check/control
 
-    # Setting factor based on users input
-    factor = math.sqrt(abs(percentage-100)/100.0) # Without abs(x-100) stenosis goes as 5 in mine = 95 applied, 40 in mine = 60 applied
+    # Storing x, y, z data points for easy access (cd = center data )
+    cdx = centerData[0][0] # x - position
+    cdy = centerData[0][1] # y - position
+    cdz = centerData[0][2] # z - position
+
+    # Setting scalingFactor based on users input
+    scalingFactor = math.sqrt(abs(percentage-100)/100.0) # Without abs(x-100) stenosis goes as 5 in mine = 95 applied, 40 in mine = 60 applied
 
     # Creating Scalar Matrix (with scalar as percent stenosis given)
-    scalarMatrix = [[factor, 0, 0, 0], [0, factor, 0, 0], [0, 0, factor, 0], [0, 0, 0, 1]]
+    scalarMatrix = [[scalingFactor, 0, 0, 0], [0, scalingFactor, 0, 0], [0, 0, scalingFactor, 0], [0, 0, 0, 1]]
 
     # Creating Translation Matrix
-    translationMatrix = [[1, 0,0, -cdOne], [0, 1, 0, -cdTwo], [0, 0, 1, -cdThree], [0, 0, 0, 1]]
+    translationMatrix = [[1, 0,0, -cdx], [0, 1, 0, -cdy], [0, 0, 1, -cdz], [0, 0, 0, 1]]
 
     # Creating Inverse Translation matrix
-    invTranslationMatrix = [[1, 0,0, cdOne], [0, 1, 0, cdTwo], [0, 0, 1, cdThree], [0, 0, 0, 1]]
+    invTranslationMatrix = [[1, 0,0, cdx], [0, 1, 0, cdy], [0, 0, 1, cdz], [0, 0, 0, 1]]
 
-    # Overall Matrix created
-    matrixS = numpy.matmul(invTranslationMatrix, scalarMatrix)
-    matrixMain = numpy.matmul(matrixS, translationMatrix)
-    # import pdb; pdb.set_trace() # Needed for debugging
+    # Creating overall matrix
+    intermediateMatrix = numpy.matmul(invTranslationMatrix, scalarMatrix)
+    matrixMain = numpy.matmul(intermediateMatrix, translationMatrix)
+    # import pdb; pdb.set_trace() # Needed for debugging matmul to create matrixMain
     # print matrixMain
 
-    ############################################################################################################################################
+    ##################################################################################################################################################################
 
     # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43x4) # Note: have to left multiply with dataMatrix
     newPointsData = numpy.matmul(matrixMain, cVdataTranspose)
