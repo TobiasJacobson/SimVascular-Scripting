@@ -76,3 +76,4 @@ import sys
 os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting')
 # Actual function call
 generateDefault()
+
