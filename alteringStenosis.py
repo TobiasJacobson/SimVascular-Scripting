@@ -1,6 +1,6 @@
 # Objective: Write script to load previously existing SimVascular files and generate
 #           a stenosis percentage based on user input
-# Inputs: .ctgr file (The SVC contour section of the artery), percent stenosis, and contour group to apply stenosis
+# Inputs: .ctgr, file percent stenosis, and contour group to apply stenosis
 
 #####################################################
 #                      Func Def                     #
@@ -86,7 +86,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     ################################## Creating matrix called cVdataTranspose, i.e main matrix #################################
     # List of ones to be appended to pointsData matrix for matrix multiplication
-    onesArr = numpy.ones(len(pointsData)) # 1x45 dimension
+    onesArr = numpy.ones(len(pointsData))
 
     # Converting pointsData to type: float, removing first column as it only contains indicies therefore isn't needed
     cVdata = numpy.array(pointsData)
@@ -95,8 +95,6 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     # Appending onesArr to pointsData
     cVdata = numpy.concatenate((cVdata,onesArr[:,None]), axis=1)
-    # cVdata = numpy.vstack((cVdata, onesArr)) # Another way to append onesArr
-    # cVdata = numpy.c_[cVdata, onesArr] # Another way to append onesArr
 
     # Transpose data for matrix multiplication
     cVdataTranspose = numpy.transpose(cVdata)
@@ -106,13 +104,10 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
 
     ################################## Creating overall matrix combining scalar, translation, and inverse translation matricies ##################################
-    # Hard coded center for segment 2 in inital stages of code
-    # centerData = [-1.90810359169811, 10.874778040444664, 20.961486548177369, 1]
-
     # Converting foundCenterPoints to floats and storing it in centerData
     centerData = numpy.array(foundCenterPoints)
     centerData = centerData.astype(numpy.float)
-    print 'Center Found At: ' + str(centerData) # Can be used to check/control
+    print 'Center Found At: ' + str(centerData) # Can be used to validate
 
     # Storing x, y, z data points for easy access (cd = center data )
     cdx = centerData[0][0] # x - position
@@ -135,14 +130,14 @@ def alteringStenosis(fileName, percentage, contourGroup):
     intermediateMatrix = numpy.matmul(invTranslationMatrix, scalarMatrix)
     matrixMain = numpy.matmul(intermediateMatrix, translationMatrix)
     # import pdb; pdb.set_trace() # Needed for debugging matmul to create matrixMain
-    # print matrixMain
+    # print matrixMain # Used to check values of transposed data
 
     ##################################################################################################################################################################
 
-    # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43x4) Note: have to left multiply with dataMatrix
+    # Matrix multiplication of cVdataTranspose and dataMatrix -- Note: have to left multiply with dataMatrix
     newPointsData = numpy.matmul(matrixMain, cVdataTranspose)
     # print newPointsData # Used to check values of newPointsData
-    newPointsData = newPointsData[:-1,:] # Removes ones from bottom of matrix
+    newPointsData = newPointsData[:-1,:] # Removes all ones from bottom of matrix
     # Transposed scaled data back to original form
     newDataTpose = numpy.transpose(newPointsData)
     # print newDataTpose # Used to check values of newDataTpose
@@ -180,7 +175,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
 # Importing required repos
 import sys
-import numpy  #as np
+import numpy
 import math
 from numpy import genfromtxt
 import pdb
