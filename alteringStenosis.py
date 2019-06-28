@@ -14,17 +14,21 @@ def alteringStenosis(fileName, percentage, contourGroup):
         print("Unable to open given file")
         return
 
+    # Check that given percent is valid (i.e. between 0-100)
+    if percentage < 0 or percentage > 100:
+        print('Percent given is not within a valid range')
+        return
+
     # Once input file has been validated, then create output file
     outFile = open(fileName+'-'+str(contourGroup)+'-'+str(percentage)+'.ctgr','w+')
 
-
     ###################### Reading input file and copying information until contour section is reached ######################
     # Iterate through given .ctgr file until desired segmentation is reached (i.e contourGroup is found)
-    found = False
+    found = False # Will be used to track whether contourGroup is found
     for seg in inFile:
-        if '<contour id=\"'+str(contourGroup)+'\"' in seg: # If found, break
+        if '<contour id=\"'+str(contourGroup)+'\"' in seg: # If found, break after writing ID line to outFile
             outFile.write(seg) # Write contour ID line to outFile
-            found = True
+            found = True # Validating that contourSegment was found
             break
         else:
             outFile.write(seg) # Else write to file
@@ -32,7 +36,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
         print('Segment does not exist in contour')
         return
 
-    # Once segment has been validated, then print creating...
+    # Once segment has been validated, print creating...
     print('Creating: '+fileName+'-'+str(contourGroup)+'-'+str(percentage)+'.ctgr')
 
     # Will store center data for desired segment (Needed later when scaling points)
@@ -53,14 +57,15 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Array of lists to store points
     pointsData = []
 
+    # Copy and save data to the pointsData list
     for iteration in inFile:
         if "</control_points>" in iteration:
             break
         else:
-            pointsData.append(re.findall('"([^"]*)"', iteration))  # ^ signifies start of string, * RE matches 0 or more (ab* will match 'a','ab' or 'abn'
+            pointsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
                                                                    # where n is n number of b's following), [] indicates a set of special characters
 
-    # Stores ...
+    # Hmm...
     ct = int(pointsData[-1][0])
 
     # Takes the actual integers from segment to alter and copies them to array: pointsData
@@ -81,7 +86,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     ################################## Creating matrix called cVdataTranspose, i.e main matrix #################################
     # List of ones to be appended to pointsData matrix for matrix multiplication
-    onesArr = numpy.ones(45) # 1x45 dimension
+    onesArr = numpy.ones(len(pointsData)) # 1x45 dimension
 
     # Converting pointsData to type: float, removing first column as it only contains indicies therefore isn't needed
     cVdata = numpy.array(pointsData)
@@ -95,7 +100,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     # Transpose data for matrix multiplication
     cVdataTranspose = numpy.transpose(cVdata)
-    # print cVdataTranspose
+    # print cVdataTranspose # Used to check values of transposed data
 
     ############################################################################################################################
 
@@ -107,14 +112,14 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Converting foundCenterPoints to floats and storing it in centerData
     centerData = numpy.array(foundCenterPoints)
     centerData = centerData.astype(numpy.float)
-    print 'Center Found At: ' + str(centerData) # Can be used a check/control
+    print 'Center Found At: ' + str(centerData) # Can be used to check/control
 
     # Storing x, y, z data points for easy access (cd = center data )
     cdx = centerData[0][0] # x - position
     cdy = centerData[0][1] # y - position
     cdz = centerData[0][2] # z - position
 
-    # Setting scalingFactor based on users input
+    # Setting scalingFactor based on users input 'percentage'
     scalingFactor = math.sqrt(abs(percentage-100)/100.0) # Without abs(x-100) stenosis goes as 5 in mine = 95 applied, 40 in mine = 60 applied
 
     # Creating Scalar Matrix (with scalar as percent stenosis given)
@@ -134,13 +139,13 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     ##################################################################################################################################################################
 
-    # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43x4) # Note: have to left multiply with dataMatrix
+    # Matrix multiplication of cVdataTranspose and dataMatrix (43x4 matrix and a 4x4 matrix leaves a 43x4) Note: have to left multiply with dataMatrix
     newPointsData = numpy.matmul(matrixMain, cVdataTranspose)
-    # print newPointsData
+    # print newPointsData # Used to check values of newPointsData
     newPointsData = newPointsData[:-1,:] # Removes ones from bottom of matrix
     # Transposed scaled data back to original form
     newDataTpose = numpy.transpose(newPointsData)
-    # print newDataTpose
+    # print newDataTpose # Used to check values of newDataTpose
 
     # Adding control points to the outFile
     outFile.write('            <control_points>\n')
