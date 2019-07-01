@@ -1,6 +1,14 @@
+# Previous Objective: Write script to load previously existing SimVascular files and generate
+#           a stenosis percentage based on user input
+# Current Objective: Write script for a complete pipeline that will: (1) Apply stenosis on existing model,
+#           (2) Generate a new model based on stenosis (3) Generate a new mesh based on new model (4) Run presolver
+# Inputs: .ctgr, file percent stenosis, and contour group to apply stenosis
+
+
 # Global variables needed for other function calls
 ctgrFile = ""
 pathPoints = []
+
 
 #####################################################
 #                      Func Def                     #
@@ -257,36 +265,33 @@ def runpreSolver(svFile):
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 # Gather path points to use contour
 def gatherPointsForMesh(pthFile):
-    # Array of lists to store points
-        pointsData = []
-
     try:
-        inFile = open(fileName+'.pth', 'r')
+        inputFile = open(pthFile+'.pth', 'r')
     except:
-        print("Unable to open given file")
+        print("Unable to open given .pth file")
         return
 
-    for seg in inFile:
-        if '<contour id=\"'+str(contourGroup)+'\"' in seg: # If found, break after writing ID line to outFile
-            break
-        else:
-            outFile.write(seg) # Else write to file
+    # Array of lists to store points
+    pathsData = []
 
     # Reading in points, making note of control vs contour points
-    for iteration in inFile:
+    for iteration in inputFile:
         if "<control_points>" in iteration:
             break
-        else:
-            foundCenterPoints.append(re.findall('"([^"]*)"', cText)) # Obtaining center data
-            outFile.write(iteration)
 
     # Copy and save data to the pointsData list
-    for iteration in inFile:
+    for iteration in inputFile:
         if "</control_points>" in iteration:
             break
         else:
-            pointsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
+            pathsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
                                                                    # where n is n number of b's following), [] indicates a set of special characters
+
+    pathsData = numpy.array(pathsData)
+    pathsData = pathsData.astype(numpy.float)
+    pathsData = pathsData[:,1:]
+
+    return pathsData
 
 ####################################################
 #                   Main                           #
@@ -301,29 +306,40 @@ import pdb
 import re
 import math
 import os.path
+import operator
 
-# Initializing for function call
-fileInput = raw_input("Enter the name of the file to be read from: \n")
-contourInput = raw_input("Enter the number of the contour you'd like to change: \n")
-percentInput = raw_input("What percent stenosis are you applying: \n")
 
-# Stenosis function call
-alteringStenosis(fileInput, float(percentInput), contourInput)
-print('Stenosis applied')
+# gatherPointsForMesh('path1')
+givePath = raw_input("Do you want to enter a pth file? (y/n) \n")
+while givePath == 'y':
+    pth = raw_input("Enter the .pth file to be read \n")
+    temp = gatherPointsForMesh(str(pth))
+    pathPoints.append(temp)
+    givePath = raw_input("Do you want to enter another pth file? (y/n) \n")
+print pathPoints
 
-# Contour call
-objectName = raw_input("Enter a name for the contour object: \n")
-modelName = raw_input("Enter a name for the contour model: \n")
-# Need user inputs for this. Gather the object name
-# Allow decision to alter lofting paramters? Use default
-makeContour(objectName, modelName)
-
-# Mesh call
-# Need vtp filename and vtk filename
-vtpFi = raw_input("Enter name of vtp file to be used for generating mesh: \n")
-vtkFi = raw_input("Enter name of vtk file to be used for generating mesh: \n")
-makeMesh(vtpFi, vtkFi)
-
-# preSolver call
-svFi = raw_input("")
-runpreSolver(svFile)
+# # Initializing for function call
+# fileInput = raw_input("Enter the name of the file to be read from: \n")
+# contourInput = raw_input("Enter the number of the contour you'd like to change: \n")
+# percentInput = raw_input("What percent stenosis are you applying: \n")
+#
+# # Stenosis function call
+# alteringStenosis(fileInput, float(percentInput), contourInput)
+# print('Stenosis applied')
+#
+# # Contour call
+# objectName = raw_input("Enter a name for the contour object: \n")
+# modelName = raw_input("Enter a name for the contour model: \n")
+# # Need user inputs for this. Gather the object name
+# # Allow decision to alter lofting paramters? Use default
+# makeContour(objectName, modelName)
+#
+# # Mesh call
+# # Need vtp filename and vtk filename
+# vtpFi = raw_input("Enter name of vtp file to be used for generating mesh: \n")
+# vtkFi = raw_input("Enter name of vtk file to be used for generating mesh: \n")
+# makeMesh(vtpFi, vtkFi)
+#
+# # preSolver call
+# svFi = raw_input("")
+# runpreSolver(svFile)
