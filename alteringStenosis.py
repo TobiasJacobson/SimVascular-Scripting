@@ -1,6 +1,14 @@
-# Objective: Write script to load previously existing SimVascular files and generate
+# Previous Objective: Write script to load previously existing SimVascular files and generate
 #           a stenosis percentage based on user input
+# Current Objective: Write script for a complete pipeline that will: (1) Apply stenosis on existing model,
+#           (2) Generate a new model based on stenosis (3) Generate a new mesh based on new model (4) Run presolver
 # Inputs: .ctgr, file percent stenosis, and contour group to apply stenosis
+
+
+# Global variables needed for other function calls
+ctgrFile = ""
+pathPoints = []
+
 
 #####################################################
 #                      Func Def                     #
@@ -10,6 +18,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Check if given file exists in cwd
     try:
         inFile = open(fileName+'.ctgr', 'r')
+        ctgrFile = fileName
     except:
         print("Unable to open given file")
         return
@@ -107,7 +116,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # Converting foundCenterPoints to floats and storing it in centerData
     centerData = numpy.array(foundCenterPoints)
     centerData = centerData.astype(numpy.float)
-    print 'Center Found At: ' + str(centerData) # Can be used to validate
+    print('Center for contour ' + contourGroup + ' found at: ' + str(centerData)) # Can be used to validate
 
     # Storing x, y, z data points for easy access (cd = center data )
     cdx = centerData[0][0] # x - position
@@ -132,7 +141,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
     # import pdb; pdb.set_trace() # Needed for debugging matmul to create matrixMain
     # print matrixMain # Used to check values of transposed data
 
-    ##################################################################################################################################################################
+    #############################################################################################################################################################
 
     # Matrix multiplication of cVdataTranspose and dataMatrix -- Note: have to left multiply with dataMatrix
     newPointsData = numpy.matmul(matrixMain, cVdataTranspose)
@@ -144,7 +153,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     # Adding control points to the outFile
     outFile.write('            <control_points>\n')
-    for i in xrange(ct+1):
+    for i in range(ct+1):
         dl = newDataTpose[i,:]
         fStr = '<point id=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />\n'.format(i,dl[0],dl[1],dl[2])
         outFile.write('                '+fStr)
@@ -152,7 +161,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     # Adding contour points to the outFile
     outFile.write('            <contour_points>\n')
-    for i in xrange(ct+1, numpy.shape(newDataTpose)[0]):
+    for i in range(ct+1, numpy.shape(newDataTpose)[0]):
         dl = newDataTpose[i,:]
         fStr = '<point id=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />\n'.format(i-ct-1,dl[0],dl[1],dl[2])
         outFile.write('                '+fStr)
@@ -168,6 +177,123 @@ def alteringStenosis(fileName, percentage, contourGroup):
     outFile.close()
     return # End of function alteringStenosis(x, y, z)
 
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+# Next steps - generate model, mesh and prepare preSolver
+# Model:
+def makeContour(newObjectName, modelName, polyVtpList):
+    # Creating data to loft solid
+    numSegs = 60 # Number of segments defaulted to 60
+
+    # To-Do
+    # Gather polyData : Seems to be in vtp file under 'Models' section
+
+    # Declaring needed variables for lofting
+    srcList = [] # contains SampleLoop generations
+
+    # Loop SampleLoop and append cList
+    for thing in polyVtpList:
+        Geom.SampleLoop(str(thing), numSegs, str(thing)+'s')
+        srcList.append(str(thing)+'s')
+
+    # Loop AlignProfile for each set of two points
+    # Aligning profiles to allow for lofting, meshing etc.
+    for x in range(len(srcList)-1):
+        Geom.AlignProfile(str(srcList[x]), str(srcList[x+1]), 'ct'+str(x)+'psa', 0)
+
+    objName = str(newObjectName)
+    numSegsAlongLength = 12
+    numPtsInLinearSampleAlongLength = 240 # Referenced elsewhere? In LoftSolid function? No other mention in scripting
+    numLinearSegsAlongLength = 120
+    numModes = 20
+    useFFT = 0
+    useLinearSampleAlongLength = 1
+
+    # Lofting solid using created values
+    Geom.LoftSolid(srcList, objName, numSegs, numSegsAlongLength, numLinearSegsAlongLength, numModes, useFFT, useLinearSampleAlongLength)
+
+    # Importing PolyData from solid to repository
+    GUI.ImportPolyDataFromRepos(str(newObjectName))
+
+    # Adding caps to model
+    VMTKUtils.Cap_with_ids(str(newObjectName),str(modelName),0,0)
+
+    # Shortcut for function call Solid.pySolidModel(), needed when calling SimVascular functions
+    s1 = Solid.pySolidModel()
+
+    # Creating model
+    Solid.SetKernel('PolyData')
+    s1.NewObject('newModel')
+    s1.SetVtkPolyData(str(modelName))
+    s1.GetBoundaryFaces(90)
+    print("Creating model: \nFaceID found: " + str(s1.GetFaceIds()))
+    s1.WriteNative(os.getcwd() + "/" + str(newObjectName) + ".vtp")
+    GUI.ImportPolyDataFromRepos(str(modelName))
+    print('Caps added to model')
+    return
+
+# Mesh:
+def makeMesh(vtpFile, vtkFile):
+    # Meshing object
+    MeshObject.SetKernel('TetGen')
+    msh = MeshObject.pyMeshObject()
+    msh.NewObject('newMesh')
+    solidFn = os.getcwd() + '/' + str(vtpFile)
+    msh.LoadModel(solidFn)
+    msh.NewMesh()
+    msh.SetMeshOptions('SurfaceMeshFlag',[1])
+    msh.SetMeshOptions('VolumeMeshFlag',[1])
+    msh.SetMeshOptions('GlobalEdgeSize',[0.75])
+    msh.SetMeshOptions('MeshWallFirst',[1])
+    msh.GenerateMesh()
+    fileName = os.getcwd() + "/" + str(vtkFile)
+    msh.WriteMesh(fileName)
+    msh.GetUnstructuredGrid('Mesh')
+    Repository.WriteVtkUnstructuredGrid("Mesh","ascii",fileName)
+    GUI.ImportUnstructedGridFromRepos('Mesh')
+    print('Mesh generated')
+    return
+
+# preSolver:
+def runpreSolver(svFile):
+    # Running preSolver from created model
+    svPath = raw_input("Enter path for preSolver: \n")
+    try:
+        os.system(svPath + str(svFile)) # Change the filename
+        print('Running preSolver')
+    except:
+        print('Unable to run preSolver')
+    return
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+# Gather path points to use contour
+def gatherPointsForMesh(pthFile):
+    try:
+        inputFile = open(pthFile+'.pth', 'r')
+    except:
+        print("Unable to open given .pth file")
+        return
+
+    # Array of lists to store points
+    pathsData = []
+
+    # Reading in points, making note of control vs contour points
+    for iteration in inputFile:
+        if "<control_points>" in iteration:
+            break
+
+    # Copy and save data to the pointsData list
+    for iteration in inputFile:
+        if "</control_points>" in iteration:
+            break
+        else:
+            pathsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
+                                                                   # where n is n number of b's following), [] indicates a set of special characters
+
+    pathsData = numpy.array(pathsData)
+    pathsData = pathsData.astype(numpy.float)
+    pathsData = pathsData[:,1:]
+
+    return pathsData
 
 ####################################################
 #                   Main                           #
@@ -175,6 +301,8 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
 # Importing required repos
 import sys
+import os
+# from sv import *
 import numpy
 import math
 from numpy import genfromtxt
@@ -182,11 +310,68 @@ import pdb
 import re
 import math
 import os.path
+import operator
 
-# Initializing for function call
-fileInput = raw_input("Enter the name of the file to be read from: \n")
-contourInput = raw_input("Enter the number of the contour you'd like to change: \n")
-percentInput = raw_input("What percent stenosis are you applying: \n")
 
-# Function call
-alteringStenosis(fileInput, float(percentInput), contourInput)
+# First change cwd to where file are stored
+# simPath = input("Enter path to simVascular project: \n")
+# os.chdir(str(simPath))
+
+# gather points function call
+# givePath = input('Do you want to enter a pth file? (y/n) \n')
+# if givePath == 'n' or givePath == 'N' or givePath == 'no' or givePath == 'No':
+#     os._exit(1)
+
+
+# while givePath == 'y' or givePath == 'Y' or givePath == 'yes' or givePath == 'Yes':
+#     pth = input('Enter the .pth file to be read \n')
+#     temp = gatherPointsForMesh(str(pth))
+#     pathPoints.append(temp)
+#     givePath = input('Do you want to enter another pth file? (y/n) \n')
+#     if givePath == 'n' or givePath == 'N' or givePath == 'no' or givePath == 'No':
+#         break
+os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Paths')
+# somePath = 'path1'
+temp = gatherPointsForMesh('path1')
+pathPoints.append(temp)
+print(pathPoints) # Check if points have been read correctly
+
+# Stenosis function call
+# os.chdir(str(simPath)+'/Segmentations')
+# fileInput = input('Enter the name of the .ctgr file to be read from: \n')
+# contourInput = input('Enter the number of the contour you want to change: \n')
+# percentInput = input('What percent stenosis are you applying: \n')
+# fileInput = 'segment1'
+# percentInput = '33'
+# contourInput = '2'
+os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Segmentations')
+alteringStenosis('segment1', 33, '0')
+print('Stenosis applied \n')
+
+# Contour function call
+print('Create new contour: \n')
+# Need user inputs for this. Gather the object name
+# objectName = input('Enter a name for the contour object: \n')
+# objectName = 'testObj'
+# modelName = input('Enter a name for the contour model: \n')
+# modelName = 'testMod'
+# Allow decision to alter lofting paramters? Use default
+os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
+polyVtpList = ['cylDemo']
+makeContour('testObj', 'testMod', polyVtpList)
+
+# Mesh function call
+print('Create new mesh: \n')
+# Need vtp filename and vtk filename
+# vtpFi = input('Enter name of vtp file to be used for generating mesh: \n')
+# vtkFi = input('Enter name of vtk file to be used for generating mesh: \n')
+# vtpFi = 'cylinder'
+# vtkFi = 'cylinder'
+os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
+makeMesh('cylinder', 'cylinder')
+
+# preSolver function call
+# solverCall = input('Do you want to run the preSolver (y/n) \n')
+# if solverCall == 'y' or solverCall == 'Y' or solverCall == 'yes' or solverCall == 'Yes':
+    # svFi = input('Enter the .svpre filename \n')
+runpreSolver('cylinderSim')
