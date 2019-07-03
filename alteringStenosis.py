@@ -8,6 +8,7 @@
 # Global variables needed for other function calls
 ctgrFile = ""
 pathPoints = []
+paths = []
 
 
 #####################################################
@@ -179,27 +180,96 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 # Next steps - generate model, mesh and prepare preSolver
+# Path
+def makePath(pointsList, pathName, contourName, radius):
+    # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
+    p = Path.pyPath()
+
+    # Initializing path
+    p.NewObject(pathName)
+    print('Path name: ' + pathName)
+
+    # Adding each point from pointsList to created path
+    for pathPoint in pointsList:
+        print(pathPoint)
+        p.AddPoint(pathPoint)
+
+    # Adding path to repository
+    p.CreatePath()
+
+    # Importing created path from repository to the 'Paths' tab in GUI
+    GUI.ImportPathFromRepos(pathName)
+    GUI.ImportPathFromRepos(pathName,'Paths')
+
+    # Initializing variables and creating segmentations (Default to circle)
+    Contour.SetContourKernel('Circle')
+    pointsLength = len(pointsList)
+    contourNameList = [pathName + 'ct1', pathName + 'ct2']
+
+    #  Shortcut for function call Contour.pyContour(), needed when calling SimVascular functions
+    c = Contour.pyContour()
+
+    # Creating 2 control segmentations for caps of the cylinder
+    c.NewObject(contourNameList[0], pathName, 0)
+    c.SetCtrlPtsByRadius(pointsList[0], radius+1)
+    c.Create()
+    c.GetPolyData('1ctp')
+
+    numTwo = p.GetPathPtsNum() # index at end of pointsList
+    c2 = Contour.pyContour()
+    c2.NewObject(contourNameList[1], pathName, numTwo-1)
+    c2.SetCtrlPtsByRadius(pointsList[1], radius+1)
+    c2.Create()
+    c2.GetPolyData('2ctp')
+
+    ## Attempt at creating systematic list of names (cct0, cct1, cct2, etc..) for individual points along path based on  pointsList length
+    # index = 0
+    # string = 'cct'
+    # while index < (pointsLength):
+    #     string += str(index)
+    #     contourNameList.append(string)
+    #     print(contourNameList[index])
+    #     index += 1
+    #
+    # # create n number of objects based on pointsList length, adding each contour to repository
+    # index = 0
+    # while index < (pointsLength-1):
+    #     c.NewObject(contourNameList[index], pathName, index)
+    #     c.SetCtrlPtsByRadius(pointsList[index], radius)
+    #     c.Create()
+    #     index += 1
+
+    # Importing contours from repository to 'Segmentations' tab in GUI
+    GUI.ImportContoursFromRepos(contourName, contourNameList, pathName, 'Segmentations')
+
+    return
+
 # Model:
-def makeContour(newObjectName, modelName, polyVtpList):
+def makeContour(newObjectName, modelName, polyVtp):
     # Creating data to loft solid
     numSegs = 60 # Number of segments defaulted to 60
 
+##################################################################################################################################################################
+##################################################################################################################################################################
     # To-Do
     # Gather polyData : Seems to be in vtp file under 'Models' section
+
+    # Issue: Current guess why it doesn't work, seems to be that no contour.pyContour exists previously or no getPolydata called.
+    # Sol?: Create new path based on previously existing and call getPolyData?? Problem for another day
 
     # Declaring needed variables for lofting
     srcList = [] # contains SampleLoop generations
 
     # Loop SampleLoop and append cList
-    for thing in polyVtpList:
-        Geom.SampleLoop(str(thing), numSegs, str(thing)+'s')
-        srcList.append(str(thing)+'s')
+    Geom.SampleLoop(polyVtp, numSegs, polyVtp+'s')
+    srcList.append(polyVtp+'s')
 
     # Loop AlignProfile for each set of two points
     # Aligning profiles to allow for lofting, meshing etc.
     for x in range(len(srcList)-1):
-        Geom.AlignProfile(str(srcList[x]), str(srcList[x+1]), 'ct'+str(x)+'psa', 0)
-
+        Geom.AlignProfile(srcList[x], srcList[x+1], 'ct'+str(x)+'psa', 0)
+##################################################################################################################################################################
+##################################################################################################################################################################
     objName = str(newObjectName)
     numSegsAlongLength = 12
     numPtsInLinearSampleAlongLength = 240 # Referenced elsewhere? In LoftSolid function? No other mention in scripting
@@ -256,9 +326,8 @@ def makeMesh(vtpFile, vtkFile):
 # preSolver:
 def runpreSolver(svFile):
     # Running preSolver from created model
-    svPath = raw_input("Enter path for preSolver: \n")
     try:
-        os.system(svPath + str(svFile)) # Change the filename
+        os.system('/usr/local/sv/svsolver/2019-01-19/svpre' + str(svFile)) # Change the filename
         print('Running preSolver')
     except:
         print('Unable to run preSolver')
@@ -286,13 +355,14 @@ def gatherPointsForMesh(pthFile):
         if "</control_points>" in iteration:
             break
         else:
-            pathsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
-                                                                   # where n is n number of b's following), [] indicates a set of special characters
-
+            line = re.findall('"([^"]*)"', iteration)
+                                                    # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
+            # line = map(float, line)                                      # where n is n number of b's following), [] indicates a set of special characters
+            pathsData.append(line)
     pathsData = numpy.array(pathsData)
     pathsData = pathsData.astype(numpy.float)
     pathsData = pathsData[:,1:]
-
+    print(pathsData)
     return pathsData
 
 ####################################################
@@ -300,27 +370,19 @@ def gatherPointsForMesh(pthFile):
 ####################################################
 
 # Importing required repos
-import sys
 import os
-# from sv import *
+from sv import *
+
+
+# os.chdir('/usr/local')
+import sys
 import numpy
-import math
 from numpy import genfromtxt
 import pdb
 import re
 import math
 import os.path
 import operator
-
-
-# First change cwd to where file are stored
-# simPath = input("Enter path to simVascular project: \n")
-# os.chdir(str(simPath))
-
-# gather points function call
-# givePath = input('Do you want to enter a pth file? (y/n) \n')
-# if givePath == 'n' or givePath == 'N' or givePath == 'no' or givePath == 'No':
-#     os._exit(1)
 
 
 # while givePath == 'y' or givePath == 'Y' or givePath == 'yes' or givePath == 'Yes':
@@ -331,47 +393,32 @@ import operator
 #     if givePath == 'n' or givePath == 'N' or givePath == 'no' or givePath == 'No':
 #         break
 os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Paths')
-# somePath = 'path1'
-temp = gatherPointsForMesh('path1')
-pathPoints.append(temp)
-print(pathPoints) # Check if points have been read correctly
-
-# Stenosis function call
-# os.chdir(str(simPath)+'/Segmentations')
-# fileInput = input('Enter the name of the .ctgr file to be read from: \n')
-# contourInput = input('Enter the number of the contour you want to change: \n')
-# percentInput = input('What percent stenosis are you applying: \n')
-# fileInput = 'segment1'
-# percentInput = '33'
-# contourInput = '2'
-os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Segmentations')
-alteringStenosis('segment1', 33, '0')
-print('Stenosis applied \n')
-
-# Contour function call
-print('Create new contour: \n')
-# Need user inputs for this. Gather the object name
-# objectName = input('Enter a name for the contour object: \n')
-# objectName = 'testObj'
-# modelName = input('Enter a name for the contour model: \n')
-# modelName = 'testMod'
-# Allow decision to alter lofting paramters? Use default
-os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
-polyVtpList = ['cylDemo']
-makeContour('testObj', 'testMod', polyVtpList)
+pathPoints = gatherPointsForMesh('path1')
+# print(pathPoints)
+# # print(pathPoints) # Check if points have been read correctly
+makePath(pathPoints, 'path1', 'newTest', 1)
+#
+# # Stenosis function call
+# # os.chdir(str(simPath)+'/Segmentations')
+# os.chdir('/Users/tobiasjacobson/Documents/Atom')
+# alteringStenosis('SVCTest', 75, '2')
+# print('Stenosis applied \n')
+#
+#
+# # Contour function call
+# print('Create new contour: \n')
+# # Allow decision to alter lofting paramters? Use default
+# # os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
+# # print('Current directory: ' + os.getcwd())
+# # polyVtpList = []
+# makeContour('testObj', 'testMod', 'cylDemo.vtp')
 
 # Mesh function call
-print('Create new mesh: \n')
+# print('Create new mesh: \n')
 # Need vtp filename and vtk filename
-# vtpFi = input('Enter name of vtp file to be used for generating mesh: \n')
-# vtkFi = input('Enter name of vtk file to be used for generating mesh: \n')
-# vtpFi = 'cylinder'
-# vtkFi = 'cylinder'
-os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
-makeMesh('cylinder', 'cylinder')
+# os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
+# makeMesh('cylinder', 'cylinder')
 
 # preSolver function call
-# solverCall = input('Do you want to run the preSolver (y/n) \n')
-# if solverCall == 'y' or solverCall == 'Y' or solverCall == 'yes' or solverCall == 'Yes':
-    # svFi = input('Enter the .svpre filename \n')
-runpreSolver('cylinderSim')
+# print('Running preSolver: \n')
+# runpreSolver('cylinderSim.svpre')
