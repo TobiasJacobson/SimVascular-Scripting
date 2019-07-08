@@ -394,15 +394,16 @@ import operator
 #         break
 os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Paths')
 pathPoints = gatherPointsForMesh('path1')
+listPathPoints = pathPoints.tolist()
 # print(pathPoints)
 # # print(pathPoints) # Check if points have been read correctly
-makePath(pathPoints, 'path1', 'newTest', 1)
+makePath(listPathPoints, 'path1', 'newTest', 1)
 #
 # # Stenosis function call
 # # os.chdir(str(simPath)+'/Segmentations')
 # os.chdir('/Users/tobiasjacobson/Documents/Atom')
-# alteringStenosis('SVCTest', 75, '2')
-# print('Stenosis applied \n')
+alteringStenosis('SVCTest', 75, '2')
+print('Stenosis applied \n')
 #
 #
 # # Contour function call
