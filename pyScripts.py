@@ -50,23 +50,6 @@ def makePath(pointsList, pathName, contourName, radius):
     c2.Create()
     c2.GetPolyData('2ctp')
 
-    ## Attempt at creating systematic list of names (cct0, cct1, cct2, etc..) for individual points along path based on  pointsList length
-    # index = 0
-    # string = 'cct'
-    # while index < (pointsLength):
-    #     string += str(index)
-    #     contourNameList.append(string)
-    #     print(contourNameList[index])
-    #     index += 1
-    #
-    # # create n number of objects based on pointsList length, adding each contour to repository
-    # index = 0
-    # while index < (pointsLength-1):
-    #     c.NewObject(contourNameList[index], pathName, index)
-    #     c.SetCtrlPtsByRadius(pointsList[index], radius)
-    #     c.Create()
-    #     index += 1
-
     # Importing contours from repository to 'Segmentations' tab in GUI
     GUI.ImportContoursFromRepos(contourName, contourNameList, pathName, 'Segmentations')
 
@@ -156,9 +139,6 @@ def runSPP():
         print('Post processing data')
     except:
         print('Unable to post process data')
-
-
-
 
 
 #####################################################
