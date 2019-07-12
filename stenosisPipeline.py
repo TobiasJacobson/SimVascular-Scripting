@@ -179,7 +179,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
 # Next steps - generate model, mesh and prepare preSolver
 # Path
-def makePath(pointsList, newPathName, newContourName, radius):
+def makePath(pointsList, newPathName, newContourName, radius, percentage, contour):
     # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
     p = Path.pyPath()
 
@@ -202,101 +202,139 @@ def makePath(pointsList, newPathName, newContourName, radius):
     # Initializing variables and creating segmentations (Default to circle)
     Contour.SetContourKernel('Circle')
     pointsLength = len(pointsList)
-    newContourNameList = [newPathName+'ct1', newPathName+'ct2', newPathName+'ct3', newPathName+'ct4',newPathName+'ct5'] # Used for SVC
-    # newContourNameList = [newPathName+'ct1', newPathName+'ct2', newPathName+'ct3', newPathName+'ct4',newPathName+'ct5', newPathName+'ct6', newPathName+'ct7', newPathName+'ct8', newPathName+'ct9'] # Used for LPA_main
+    # newContourNameList = [newPathName+'ct1', newPathName+'ct2', newPathName+'ct3', newPathName+'ct4',newPathName+'ct5'] # Used for SVC
+    newContourNameList = [newPathName+'ct1', newPathName+'ct2', newPathName+'ct3', newPathName+'ct4',newPathName+'ct5', newPathName+'ct6', newPathName+'ct7', newPathName+'ct8', newPathName+'ct9'] # Used for LPA_main
 
     # Shortcut for function call Contour.pyContour(), needed when calling SimVascular functions
     numEnd = p.GetPathPtsNum() # index at end of pointsList
-    numSec = int((numEnd-1)/4) # SVC numSec
-    # numSec = int((numEnd-1)/8) # LPA numSec
+    # numSec = int((numEnd-1)/4) # SVC numSec
+    numSec = int((numEnd-1)/8) # LPA numSec
+
+    # Calculate radius reduction for specific contour group
+    a1 = (math.pi)*(radius)*(radius)
+    delataA1 = a1*((100-percentage)/100)
+    q = delataA1/(math.pi)
+    newRad = math.sqrt(q)
+
 
     c = Contour.pyContour()
     c.NewObject(newContourNameList[0], newPathName, 0)
-    c.SetCtrlPtsByRadius(pointsList[0], radius)
+    if contour == '0':
+        c.SetCtrlPtsByRadius(pointsList[0], newRad)
+    else:
+        c.SetCtrlPtsByRadius(pointsList[0], radius)
     c.Create()
     c.GetPolyData('1ctp')
     polyDataList.append('1ctp')
 
     c2 = Contour.pyContour()
     c2.NewObject(newContourNameList[1], newPathName, numSec)
-    c2.SetCtrlPtsByRadius(pointsList[1], radius)
+    if contour == '1':
+        c2.SetCtrlPtsByRadius(pointsList[1], newRad)
+    else:
+        c2.SetCtrlPtsByRadius(pointsList[1], radius)
     c2.Create()
     c2.GetPolyData('2ctp')
     polyDataList.append('2ctp')
 
     c3 = Contour.pyContour()
     c3.NewObject(newContourNameList[2], newPathName, numSec*2)
-    c3.SetCtrlPtsByRadius(pointsList[2], radius)
+    if contour == '2':
+        c3.SetCtrlPtsByRadius(pointsList[2], newRad)
+    else:
+        c3.SetCtrlPtsByRadius(pointsList[2], radius)
     c3.Create()
     c3.GetPolyData('3ctp')
     polyDataList.append('3ctp')
 
     c4 = Contour.pyContour()
     c4.NewObject(newContourNameList[3], newPathName, numSec*3)
-    c4.SetCtrlPtsByRadius(pointsList[3], radius)
+    if contour == '3':
+        c4.SetCtrlPtsByRadius(pointsList[3], newRad)
+    else:
+        c4.SetCtrlPtsByRadius(pointsList[3], radius)
     c4.Create()
     c4.GetPolyData('4ctp')
     polyDataList.append('4ctp')
 
     c5 = Contour.pyContour()
     c5.NewObject(newContourNameList[4], newPathName, numSec*4)
-    c5.SetCtrlPtsByRadius(pointsList[4], radius)
+    if contour == '4':
+        c5.SetCtrlPtsByRadius(pointsList[4], newRad)
+    else:
+        c5.SetCtrlPtsByRadius(pointsList[4], radius)
     c5.Create()
     c5.GetPolyData('5ctp')
     polyDataList.append('5ctp')
     # SVC cut off -------------------------------------------------
-    # c6 = Contour.pyContour()
-    # c6.NewObject(newContourNameList[5], newPathName, numSec*5)
-    # c6.SetCtrlPtsByRadius(pointsList[5], radius)
-    # c6.Create()
-    # c6.GetPolyData('6ctp')
-    # polyDataList.append('6ctp')
-    #
-    # c7 = Contour.pyContour()
-    # c7.NewObject(newContourNameList[6], newPathName, numSec*6)
-    # c7.SetCtrlPtsByRadius(pointsList[6], radius)
-    # c7.Create()
-    # c7.GetPolyData('7ctp')
-    # polyDataList.append('7ctp')
-    #
-    # c8 = Contour.pyContour()
-    # c8.NewObject(newContourNameList[7], newPathName, numSec*7)
-    # c8.SetCtrlPtsByRadius(pointsList[7], radius)
-    # c8.Create()
-    # c8.GetPolyData('8ctp')
-    # polyDataList.append('8ctp')
-    #
-    # c9 = Contour.pyContour()
-    # c9.NewObject(newContourNameList[8], newPathName, numSec*8)
-    # c9.SetCtrlPtsByRadius(pointsList[8], radius)
-    # c9.Create()
-    # c9.GetPolyData('9ctp')
-    # polyDataList.append('9ctp')
+    c6 = Contour.pyContour()
+    c6.NewObject(newContourNameList[5], newPathName, numSec*5)
+    if contour == '5':
+        c6.SetCtrlPtsByRadius(pointsList[5], newRad)
+    else:
+        c6.SetCtrlPtsByRadius(pointsList[5], radius)
+    c6.Create()
+    c6.GetPolyData('6ctp')
+    polyDataList.append('6ctp')
+
+    c7 = Contour.pyContour()
+    c7.NewObject(newContourNameList[6], newPathName, numSec*6)
+    if contour == '6':
+        c7.SetCtrlPtsByRadius(pointsList[6], newRad)
+    else:
+        c7.SetCtrlPtsByRadius(pointsList[6], radius)
+    c7.Create()
+    c7.GetPolyData('7ctp')
+    polyDataList.append('7ctp')
+
+    c8 = Contour.pyContour()
+    c8.NewObject(newContourNameList[7], newPathName, numSec*7)
+    if contour == '7':
+        c8.SetCtrlPtsByRadius(pointsList[7], newRad)
+    else:
+        c8.SetCtrlPtsByRadius(pointsList[7], radius)
+    c8.Create()
+    c8.GetPolyData('8ctp')
+    polyDataList.append('8ctp')
+
+    c9 = Contour.pyContour()
+    c9.NewObject(newContourNameList[8], newPathName, numSec*8)
+    if contour == '8':
+        c9.SetCtrlPtsByRadius(pointsList[8], newRad)
+    else:
+        c9.SetCtrlPtsByRadius(pointsList[8], radius)
+    c9.Create()
+    c9.GetPolyData('9ctp')
+    polyDataList.append('9ctp')
 
     # # Attempt at creating systematic list of names (cct0, cct1, cct2, etc..) for individual points along path based on pointsList length
     # # But no way to create new X for cX = Contour.pyContour() calls
     # newContourNameList = [None] * pointsLength
     # index = 0
-    # string = 'ctp'
+    # addString = 'ctp'
     # cString = 'c'
-    # callList = [None] * pointsLength
+    # callList = []
     # while index < (pointsLength):
-    #     string = str(index) + string
-    #     newContourNameList.append(string)
-    #     cString = string + str(index)
+    #     addString = str(index) + addString
+    #     newContourNameList.append(addString)
+    #     cString = cString + str(index)
     #     callList.append(cString)
-    #     # print(newContourNameList[index])
-    #     # print(callList)
+    #     addString = 'ctp'
+    #     cString = 'c'
     #     index += 1
     #
     # # create n number of objects based on pointsList length, adding each contour to repository
     # index = 0
     # while index < (pointsLength-1):
     #     callList[index] = Contour.pyContour()
-    #     callList[index].NewObject(newContourNameList[index], newPathName, index)
-    #     callList[index].SetCtrlPtsByRadius(pointsList[index], radius)
+    #     callList[index].NewObject(newContourNameList[index], newPathName, numSec*index)
+    #     if contour == str(index):
+    #         callList[index].SetCtrlPtsByRadius(pointsList[index], radius)
+    #     else:
+    #         callList[index].SetCtrlPtsByRadius(pointsList[index], newRad)
     #     callList[index].Create()
-    #     callList[index].GetPolyData(newContourNameList[index]+'p')
+    #     callList[index].GetPolyData(newContourNameList[index+1])
+    #     polyDataList.append(newContourNameList[index+1])
     #     index += 1
 
     # Importing contours from repository to 'Segmentations' tab in GUI
@@ -328,17 +366,17 @@ def makeContour(newObjectName, modelName):
     Geom.SampleLoop(polyDataList[4], numSegs, polyDataList[4]+'s')
     srcList.append(polyDataList[4]+'s')
     # SVC cut off -------------------------------------------------
-    # Geom.SampleLoop(polyDataList[5], numSegs, polyDataList[5]+'s')
-    # srcList.append(polyDataList[5]+'s')
-    #
-    # Geom.SampleLoop(polyDataList[6], numSegs, polyDataList[6]+'s')
-    # srcList.append(polyDataList[6]+'s')
-    #
-    # Geom.SampleLoop(polyDataList[7], numSegs, polyDataList[7]+'s')
-    # srcList.append(polyDataList[7]+'s')
-    #
-    # Geom.SampleLoop(polyDataList[8], numSegs, polyDataList[8]+'s')
-    # srcList.append(polyDataList[8]+'s')
+    Geom.SampleLoop(polyDataList[5], numSegs, polyDataList[5]+'s')
+    srcList.append(polyDataList[5]+'s')
+
+    Geom.SampleLoop(polyDataList[6], numSegs, polyDataList[6]+'s')
+    srcList.append(polyDataList[6]+'s')
+
+    Geom.SampleLoop(polyDataList[7], numSegs, polyDataList[7]+'s')
+    srcList.append(polyDataList[7]+'s')
+
+    Geom.SampleLoop(polyDataList[8], numSegs, polyDataList[8]+'s')
+    srcList.append(polyDataList[8]+'s')
 
     # Loop AlignProfile for each set of two points. Aligning profiles to allow for lofting, meshing etc.
     # Geom.orientProfile('', x y z, tan(x y z), xyz in plane of obj, 'newOrient')
@@ -374,28 +412,28 @@ def makeContour(newObjectName, modelName):
     LT5 = [L51, L52, L52]
     # print(LT5)
     # SVC cut off -------------------------------------------------
-    # L61 = math.tan(listPathPoints[5][0])
-    # L62 = math.tan(listPathPoints[5][1])
-    # L63 = math.tan(listPathPoints[5][2])
-    # LT6 = [L61, L62, L62]
-    # # print(LT6)
-    #
-    # L71 = math.tan(listPathPoints[6][0])
-    # L72 = math.tan(listPathPoints[6][1])
-    # L73 = math.tan(listPathPoints[6][2])
-    # LT7 = [L71, L72, L72]
-    # # print(LT7)
-    #
-    # L81 = math.tan(listPathPoints[7][0])
-    # L82 = math.tan(listPathPoints[7][1])
-    # L83 = math.tan(listPathPoints[7][2])
-    # LT8 = [L81, L82, L82]
-    # # print(LT8)
-    #
-    # L91 = math.tan(listPathPoints[8][0])
-    # L92 = math.tan(listPathPoints[8][1])
-    # L93 = math.tan(listPathPoints[8][2])
-    # LT9 = [L91, L92, L92]
+    L61 = math.tan(listPathPoints[5][0])
+    L62 = math.tan(listPathPoints[5][1])
+    L63 = math.tan(listPathPoints[5][2])
+    LT6 = [L61, L62, L62]
+    # print(LT6)
+
+    L71 = math.tan(listPathPoints[6][0])
+    L72 = math.tan(listPathPoints[6][1])
+    L73 = math.tan(listPathPoints[6][2])
+    LT7 = [L71, L72, L72]
+    # print(LT7)
+
+    L81 = math.tan(listPathPoints[7][0])
+    L82 = math.tan(listPathPoints[7][1])
+    L83 = math.tan(listPathPoints[7][2])
+    LT8 = [L81, L82, L82]
+    # print(LT8)
+
+    L91 = math.tan(listPathPoints[8][0])
+    L92 = math.tan(listPathPoints[8][1])
+    L93 = math.tan(listPathPoints[8][2])
+    LT9 = [L91, L92, L92]
     # print(LT9)
     # -------------------------------------- #
     # print('cos: ')
@@ -429,28 +467,28 @@ def makeContour(newObjectName, modelName):
     LC5 = [C51, C52, C53]
     # print(LC5)
     # SVC cut off -------------------------------------------------
-    # C61 = math.cos(listPathPoints[5][0])
-    # C62 = math.cos(listPathPoints[5][1])
-    # C63 = math.cos(listPathPoints[5][2])
-    # LC6 = [C61, C62, C63]
-    # # print(LC6)
-    #
-    # C71 = math.cos(listPathPoints[6][0])
-    # C72 = math.cos(listPathPoints[6][1])
-    # C73 = math.cos(listPathPoints[6][2])
-    # LC7 = [C71, C72, C73]
-    # # print(LT7)
-    #
-    # C81 = math.cos(listPathPoints[7][0])
-    # C82 = math.cos(listPathPoints[7][1])
-    # C83 = math.cos(listPathPoints[7][2])
-    # LC8 = [C81, C82, C83]
-    # # print(LC8)
-    #
-    # C91 = math.cos(listPathPoints[8][0])
-    # C92 = math.cos(listPathPoints[8][1])
-    # C93 = math.cos(listPathPoints[8][2])
-    # LC9 = [C91, C92, C93]
+    C61 = math.cos(listPathPoints[5][0])
+    C62 = math.cos(listPathPoints[5][1])
+    C63 = math.cos(listPathPoints[5][2])
+    LC6 = [C61, C62, C63]
+    # print(LC6)
+
+    C71 = math.cos(listPathPoints[6][0])
+    C72 = math.cos(listPathPoints[6][1])
+    C73 = math.cos(listPathPoints[6][2])
+    LC7 = [C71, C72, C73]
+    # print(LT7)
+
+    C81 = math.cos(listPathPoints[7][0])
+    C82 = math.cos(listPathPoints[7][1])
+    C83 = math.cos(listPathPoints[7][2])
+    LC8 = [C81, C82, C83]
+    # print(LC8)
+
+    C91 = math.cos(listPathPoints[8][0])
+    C92 = math.cos(listPathPoints[8][1])
+    C93 = math.cos(listPathPoints[8][2])
+    LC9 = [C91, C92, C93]
     # print(LC9)
 
     # Used --> Geom.OrientProfile() but can also use --> Geom.AlignProfile()
@@ -460,10 +498,10 @@ def makeContour(newObjectName, modelName):
     Geom.OrientProfile('3ctps', listPathPoints[2], LT3, LC3, 'newOrient3')
     Geom.OrientProfile('4ctps', listPathPoints[3], LT4, LC4, 'newOrient4')
     Geom.OrientProfile('5ctps', listPathPoints[4], LT5, LC5, 'newOrient5')
-    # Geom.OrientProfile('6ctps', listPathPoints[5], LT6, LC6, 'newOrient6')
-    # Geom.OrientProfile('7ctps', listPathPoints[6], LT7, LC7, 'newOrient7')
-    # Geom.OrientProfile('8ctps', listPathPoints[7], LT8, LC8, 'newOrient8')
-    # Geom.OrientProfile('9ctps', listPathPoints[8], LT9, LC9, 'newOrient9')
+    Geom.OrientProfile('6ctps', listPathPoints[5], LT6, LC6, 'newOrient6')
+    Geom.OrientProfile('7ctps', listPathPoints[6], LT7, LC7, 'newOrient7')
+    Geom.OrientProfile('8ctps', listPathPoints[7], LT8, LC8, 'newOrient8')
+    Geom.OrientProfile('9ctps', listPathPoints[8], LT9, LC9, 'newOrient9')
 
     # Creating values to loft solid
     objName = str(newObjectName)
@@ -573,8 +611,8 @@ import operator
 print('Applying stenosis:')
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Segmentations') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
-ctgrFile = alteringStenosis('SVC', 90, '2')
-# ctgrFile = alteringStenosis('LPA_main', 90, '2')
+# ctgrFile = alteringStenosis('SVC', 90, '2')
+ctgrFile = alteringStenosis('LPA_main', 90, '2')
 
 # Gathering points from given model
 print('\nGathering points & making path: \n')
@@ -583,18 +621,25 @@ print('Current directory: ' + os.getcwd())
 print('Path: ' + ctgrFile + '\n')
 pathPoints = gatherPoints(ctgrFile)
 listPathPoints = pathPoints.tolist() # Conversion from numpy array to python list to allow for valid makePath function call
-makePath(listPathPoints, 'SVC_copy_Path', 'SVC_copy_Segment', 0.35)
+# makePath(listPathPoints, 'SVC_copy_Path', 'SVC_copy_Segment', 0.495, 90, '2') # SVC radius: 0.495 --
+makePath(listPathPoints, 'LPA_main_copy_Path', 'LPA_main_copy_Segment', 0.3, 90, '2') # LPA radius: ~0.3 --
+
 
 # Contour function call
 print('Create new contour:')
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
-makeContour('SVC_newCont', 'SVC_newModel')
+# makeContour('SVC_newCont', 'SVC_newModel')
+makeContour('LPA_main_newCont', 'LPA_main_newModel')
+
 
 # Mesh function call
 print('Create new mesh:')
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
-makeMesh('SVC_newCont.vtp', 'SVC_newContOutFile.vtk')
+# makeMesh('SVC_newCont.vtp', 'SVC_newContOutFile.vtk')
+makeMesh('LPA_main_newCont.vtp', 'LPA_main_newContOutFile.vtk')
+
+
 
 # preSolver function call
 # print('Running preSolver: \n')
