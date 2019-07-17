@@ -5,16 +5,16 @@
 #           (4) Run presolver
 # Inputs: .ctgr file, percent stenosis, contour group to apply stenosis
 
-### NOTE ###
-# For any line containing # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
-# Change the directory path to location of files on your computer
+### NOTES ###
+# Change the directory path to location of files on your computer for any line containing # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+# Couldn't change 3D path point size (sorry they're so big)
+# For more detailed mesh, change 'GlobalEdgeSize, [x]' in makeMesh function
 
-# Global variables needed for more than one function call (Hence made global)
+# Global list needed for more than one function call (Hence made global)
 polyDataList = []
-postScaleMatrix = []
 
 #########################################################
-#                  Function Definition                  #
+#                  Function Definitions                 #
 #########################################################
 
 def alteringStenosis(fileName, percentage, contourGroup):
@@ -30,9 +30,8 @@ def alteringStenosis(fileName, percentage, contourGroup):
         print('Percent given is not within a valid range')
         return
 
-    # Once segment and % have been validated, print creating...
+    # Once file and % have been validated create output file
     print('Creating: '+fileName+'-'+str(contourGroup)+'-'+str(percentage)+'.ctgr')
-    # Creating output file
     outFile = open(fileName+'-'+str(contourGroup)+'-'+str(percentage)+'.ctgr','w+')
 
     # Iterate through given .ctgr file until desired segmentation is reached (i.e contourGroup is found)
@@ -43,8 +42,9 @@ def alteringStenosis(fileName, percentage, contourGroup):
             found = True # Validating that contourSegment was found
             break
         else:
-            outFile.write(seg) # Else write to file
-    if found == False: # Edge case if contour group is not found
+            outFile.write(seg) # Else write to outFile
+
+    if found == False: # Edge case if contour group is not found && exits
         print('Segment does not exist in contour')
         return
 
@@ -73,10 +73,9 @@ def alteringStenosis(fileName, percentage, contourGroup):
         else:
             pointsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
                                                                    # where n is n number of b's following), [] indicates a set of special characters
-    # Hmm... Yeah not really sure -- Ask Erica
-    ct = int(pointsData[-1][0])
+    ct = int(pointsData[-1][0]) # Hmm... Yeah not really sure -- Ask Erica
 
-    # Takes the actual integers from segment to alter and copies them to array: pointsData
+    # Takes the actual integers from segment to alter and copies them to list: pointsData
     count = 0
     for iteration in inFile:
         if "</contour_points>" in iteration:
@@ -87,8 +86,6 @@ def alteringStenosis(fileName, percentage, contourGroup):
             else:
                 stringLine = iteration
                 pointsData.append(re.findall('"([^"]*)"', stringLine))
-                # outFile.write(iteration) # This wrote original segment data to outfle creating a duplicate...
-
 
     ################################## Creating matrix called cVdataTranspose (converted data matrix transposed), i.e main matrix #################################
     # List of ones to be appended to pointsData matrix for matrix multiplication
@@ -104,8 +101,6 @@ def alteringStenosis(fileName, percentage, contourGroup):
 
     # Transpose data for matrix multiplication
     cVdataTranspose = numpy.transpose(cVdata)
-    # print cVdataTranspose # Used to check values of transposed data
-
 
     ################################## Creating overall matrix combining scalar, translation, and inverse translation matricies ##################################
     # Converting foundCenterPoints to floats and storing it in centerData
@@ -144,10 +139,6 @@ def alteringStenosis(fileName, percentage, contourGroup):
     newDataTpose = numpy.transpose(newPointsData)
     # print newDataTpose # Used to check values of newDataTpose
 
-    # Copy data to global matrix
-    for item in newDataTpose:
-        postScaleMatrix.append(item)
-
     # Adding control points to the outFile
     outFile.write('            <control_points>\n')
     for i in range(ct+1):
@@ -176,6 +167,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
      # End of function alteringStenosis(str, int, str)
 
 # Next steps - generate model, mesh and prepare preSolver
+
 # Path
 def makePath(pointsList, newPathName, newContourName, percentage, contour):
     # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
@@ -195,7 +187,7 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
     # Importing created path from repository to the 'Paths' tab in GUI
     GUI.ImportPathFromRepos(newPathName,'Paths')
 
-    # Initializing variables and creating segmentations (Default to circle)
+    # Initializing variables and creating segmentations (Defaulted to circle)
     Contour.SetContourKernel('Circle')
     pointsLength = len(pointsList)
 
@@ -203,7 +195,7 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
     numEnd = p.GetPathPtsNum() # index at end of pointsList
     numSec = int((numEnd-1)/(pointsLength-1))
 
-    # will calc raddi (dist) here (since each segment may vary in diameter)
+    # will calc radii (dist) here (since each segment/contour may vary in diameter)
     distances = []
     i = 0
     u = 0
@@ -230,7 +222,7 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
         stenosisDistances.append(math.sqrt(q))
         index += 1
 
-    # Creating newContourNameList
+    # Creating new contour names --> going as newPathName + 'ct1', 'ct2' etc
     strs = 1
     newContourNameList = []
     while strs < (pointsLength+1):
@@ -238,7 +230,7 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
         newContourNameList.append(stAdd)
         strs += 1
 
-    # Creating polyList
+    # Creating polyDataList --> going as '1ctp', '2ctp' etc
     strs = 1
     polyList = []
     while strs < (pointsLength+1):
@@ -246,8 +238,7 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
         polyList.append(stAdd)
         strs += 1
 
-    # Attempt at creating systematic list of names (cct0, cct1, cct2, etc..) for individual points along path based on pointsList length
-    # But no way to create new X for cX = Contour.pyContour() calls
+    # Creating new contours based on pointsList and collecting polyData for modeling
     index = 0
     while index < pointsLength:
         cCall = 'c' + str(index)
@@ -255,10 +246,10 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
         cCall.NewObject(newContourNameList[index], newPathName, numSec*index)
         if contour == str(index):
             cCall.SetCtrlPtsByRadius(pointsList[index], stenosisDistances[index])
-            # cCall.SetCtrlPts(controlPointsList[index]) # Tho still unsure of its arg inputs...
+            # cCall.SetCtrlPts(controlPointsList[index]) # Could resolve contour 0 distortion --> Tho still unsure of its arg inputs...
         else:
             cCall.SetCtrlPtsByRadius(pointsList[index], distances[index])
-            # cCall.SetCtrlPts(controlPointsList[index]) # Tho still unsure of its arg inputs...
+            # cCall.SetCtrlPts(controlPointsList[index]) # Could resolve contour 0 distortion --> Tho still unsure of its arg inputs...
         cCall.Create()
         cCall.GetPolyData(polyList[index])
         polyDataList.append(polyList[index])
@@ -266,26 +257,22 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
 
     # Importing contours from repository to 'Segmentations' tab in GUI
     GUI.ImportContoursFromRepos(newContourName, newContourNameList, newPathName, 'Segmentations')
-
     return
 
 # Model:
 def makeContour(newObjectName, modelName):
-    # Creating data to loft solid ------------------ #
-    numSegs = 120 # Number of segments defaulted to 60
+    numSegs = 120 # Number of segments defaulted to 120
 
-    # Declaring needed variables for lofting
     srcList = [] # contains SampleLoop generations
 
-    # Apply SampleLoop and append to cList for each item of polyDataList
-    pointsLength = len(polyDataList)
+    # Apply SampleLoop and appending to srcList for each item of polyDataList
     for item in polyDataList:
         Geom.SampleLoop(item, numSegs, item+'s')
         srcList.append(item+'s')
 
-
     pointsLen = len(listPathPoints) # Length of listPathPoints
-    # Tan calls
+
+    # Tangent calls
     t3s = [0, 0, 0]
     tTot = [None]*pointsLen
     calls = 0
@@ -296,7 +283,7 @@ def makeContour(newObjectName, modelName):
         tTot[calls] = t3s
         calls += 1
 
-    # Cos calls
+    # Cosine calls
     c3s = [0, 0, 0]
     cTot = [None]*pointsLen
     calls = 0
@@ -307,10 +294,10 @@ def makeContour(newObjectName, modelName):
         cTot[calls] = c3s
         calls += 1
 
-    # Used --> Geom.OrientProfile() but can also use --> Geom.AlignProfile() Not entirely sure what it does tho...
+    # Used --> Geom.OrientProfile() but can also use --> Geom.AlignProfile() Not entirely sure what either do tho...
     # Geom.orientProfile('', x y z, tan(x y z), xyz in plane of obj, 'newOrient')
     # Note: Tan and cos are in degrees, not radians
-    dev = 0
+    dev = 0 # Used to keep index
     while dev < (pointsLen-1):
         st1 = str(dev+1)+'ctps'
         st2 = 'newOrient'+str(dev+1)
@@ -326,10 +313,10 @@ def makeContour(newObjectName, modelName):
     useLinearSampleAlongLength = 1
     Geom.LoftSolid(srcList, objName, numSegs, numSegsAlongLength, numLinearSegsAlongLength, numModes, useFFT, useLinearSampleAlongLength)
 
-    # Importing PolyData from solid to repository
+    # Importing PolyData from solid to repository (No cap model)
     GUI.ImportPolyDataFromRepos(str(newObjectName))
 
-    # Adding caps to model
+    # Adding caps to model (Full cap model)
     VMTKUtils.Cap_with_ids(str(newObjectName),str(modelName),0,0)
 
     # Shortcut for function call Solid.pySolidModel(), needed when calling SimVascular functions
@@ -370,7 +357,6 @@ def makeMesh(vtpFile, vtkFile):
 
 # preSolver:
 def runpreSolver(svFile):
-    # Running preSolver from created model
     try:
         os.system('/usr/local/sv/svsolver/2019-01-19/svpre' + str(svFile))
         print('Running preSolver')
@@ -378,7 +364,7 @@ def runpreSolver(svFile):
         print('Unable to run preSolver')
     return
 
-# Gather path points to use contour
+# Gathering path points from oroginal contour to use for new contour
 def gatherPoints(segFile):
     try:
         inputFile = open(segFile+'.ctgr', 'r')
@@ -388,7 +374,6 @@ def gatherPoints(segFile):
 
     # Array of lists to store points
     segsData = []
-    radiusData = []
     count = 0
 
     # Reading in points, making note of control vs contour points && Copy and save data to the pointsData list
@@ -397,9 +382,6 @@ def gatherPoints(segFile):
             segsData.append(re.findall('"([^"]*)"', iteration)) # Obtaining center data for each segment
     segsData = numpy.array(segsData)
     segsData = segsData.astype(numpy.float)
-    # radiusData = numpy.array(radiusData)
-    # radiusData = radiusData.astype(numpy.float)
-    radiusPoints = radiusData
     return segsData
 
 # Gathering control points to calculate radii for setting control points
@@ -434,7 +416,7 @@ def gatherControlPoints(segFile): # .ctgr file
 #                   Main                           #
 ####################################################
 
-# Importing required repos
+# Importing various repos.
 import os
 from sv import *
 import sys
@@ -446,17 +428,17 @@ import math
 import os.path
 import operator
 
-
-# # Clearing repository, else gives error of duplicates (Still no way to remove from GUI tho so I still have issues but Fanwei is addressing this)
+# # Clearing repository (Still no way to remove from GUI tho so I still have issues, but Fanwei is addressing this)
 # objs = Repository.List()
 # for name in objs:
 #     Repository.Delete(name)
 
-# Used for function calls (Change based on desired alterations)
+# ------- Change based on desired alterations ------- #
 mainCTGRfile = 'SVC'
 contourGroupToAlter = '2'
 percentStenosis = 50
 svpreFile = 'idealSim2.svpre'
+# --------------------------------------------------- #
 
 # Defaulted to these below, change if you want
 newPthName = mainCTGRfile + '_copy_Path'
@@ -466,13 +448,12 @@ modelWithCap = mainCTGRfile + '_fullMod'
 meshVtp = modelNoCap + '.vtp'
 meshVtk = mainCTGRfile + '_OutFile.vtk'
 
-# No need to change
+# Various variables needed
 stenosisCTGRfile = "None"
 controlPointsList = []
-radiusPoints = []
 pathPoints = []
 
-# Change cwd to SimV Segmentations
+# Change cwd to SimV project --> Segmentations
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Segmentations') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
 
@@ -489,7 +470,7 @@ pathPoints = gatherPoints(stenosisCTGRfile)
 listPathPoints = pathPoints.tolist() # Conversion from numpy array to python list to allow for valid makePath function call
 makePath(listPathPoints, newPthName, newSegNAme, percentStenosis, contourGroupToAlter)
 
-# Change cwd to SimV Models
+# Change cwd to SimV project --> Models
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
 # Contour function call
