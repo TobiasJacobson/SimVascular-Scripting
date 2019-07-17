@@ -10,6 +10,9 @@
 # Couldn't change 3D path point size (sorry they're so big)
 # For more detailed mesh, change 'GlobalEdgeSize, [x]' in makeMesh function
 
+### REMAINING ISSUES ###
+# Contour 0 is slightly shifted, not sure how to fix or why it occurs but doesn't largely effect model, mesh, or unification
+
 # Global list needed for more than one function call (Hence made global)
 polyDataList = []
 
