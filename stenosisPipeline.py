@@ -1,5 +1,5 @@
-# Current Objective: Write script for a complete pipeline that will:
-#           (1) Apply stenosis on existing model (Well actually its individual segments)
+# Objective: Write script for a complete pipeline that will:
+#           (1) Apply stenosis on existing model (Well actually its individual contour segments)
 #           (2) Generate a new model based on applied stenosis
 #           (3) Generate a new mesh based on new model
 #           (4) Run presolver
@@ -21,6 +21,9 @@ polyDataList = []
 #########################################################
 
 def alteringStenosis(fileName, percentage, contourGroup):
+    '''
+
+    '''
     # Check if given file exists in cwd
     try:
         inFile = open(fileName+'.ctgr', 'r')
@@ -330,10 +333,9 @@ def makeContour(newObjectName, modelName):
     s1.NewObject('newModel')
     s1.SetVtkPolyData(str(modelName))
     s1.GetBoundaryFaces(90)
-    print("Creating model: \nFaceID found: " + str(s1.GetFaceIds()))
+    print("FaceID's found: " + str(s1.GetFaceIds()))
     s1.WriteNative(os.getcwd() + "/" + str(newObjectName) + ".vtp")
     GUI.ImportPolyDataFromRepos(str(modelName))
-    print('Caps added to model \n')
     return
 
 # Mesh:
@@ -362,9 +364,9 @@ def makeMesh(vtpFile, vtkFile):
 def runpreSolver(svFile):
     try:
         os.system('/usr/local/sv/svsolver/2019-01-19/svpre' + str(svFile))
-        print('Running preSolver')
+        print('\nRunning preSolver')
     except:
-        print('Unable to run preSolver')
+        print('\nUnable to run preSolver')
     return
 
 # Gathering path points from oroginal contour to use for new contour
@@ -464,7 +466,7 @@ print('Current directory: ' + os.getcwd())
 controlPointsList = gatherControlPoints(mainCTGRfile)
 
 # Stenosis function call
-print('Applying stenosis:')
+print('\nApplying stenosis:')
 stenosisCTGRfile = alteringStenosis(mainCTGRfile, percentStenosis, contourGroupToAlter)
 
 # Gathering points from given model
@@ -477,13 +479,12 @@ makePath(listPathPoints, newPthName, newSegNAme, percentStenosis, contourGroupTo
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
 # Contour function call
-print('Create new contour:')
+print('\nCreating new contour and model:')
 makeContour(modelNoCap, modelWithCap)
 
 # Mesh function call
-print('Create new mesh:')
+print('\nCreating new mesh:')
 makeMesh(meshVtp, meshVtk)
 
 # preSolver function call
-print('Running preSolver: \n')
 runpreSolver(svpreFile)
