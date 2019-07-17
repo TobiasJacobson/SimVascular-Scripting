@@ -500,6 +500,6 @@ makeContour(modelNoCap, modelWithCap)
 print('Create new mesh:')
 makeMesh(meshVtp, meshVtk)
 
-# # preSolver function call
-# print('Running preSolver: \n')
-# runpreSolver(svpreFile)
+# preSolver function call
+print('Running preSolver: \n')
+runpreSolver(svpreFile)
