@@ -7,13 +7,11 @@
 
 ### NOTE ###
 # For any line containing # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
-# Change the path directory to location of files on your computer
+# Change the directory path to location of files on your computer
 
 # Global variables needed for more than one function call (Hence made global)
-pathPoints = []
 polyDataList = []
 postScaleMatrix = []
-ctgrFile = "None"
 
 #########################################################
 #                  Function Definition                  #
@@ -210,12 +208,12 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
     i = 0
     u = 0
     while i < pointsLength:
-        xS1 = cp[u][0]
-        xS2 = cp[u+1][0]
-        yS1 = cp[u][1]
-        yS2 = cp[u+1][1]
-        zS1 = cp[u][2]
-        zS2 = cp[u+1][2]
+        xS1 = controlPointsList[u][0]
+        xS2 = controlPointsList[u+1][0]
+        yS1 = controlPointsList[u][1]
+        yS2 = controlPointsList[u+1][1]
+        zS1 = controlPointsList[u][2]
+        zS2 = controlPointsList[u+1][2]
         allInts = ((xS2-xS1)**2)+((yS2-yS1)**2)+((zS2-zS1)**2)
         distances.append(math.sqrt(allInts))
         i += 1
@@ -257,8 +255,10 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
         cCall.NewObject(newContourNameList[index], newPathName, numSec*index)
         if contour == str(index):
             cCall.SetCtrlPtsByRadius(pointsList[index], stenosisDistances[index])
+            # cCall.SetCtrlPts(controlPointsList[index]) # Tho still unsure of its arg inputs...
         else:
             cCall.SetCtrlPtsByRadius(pointsList[index], distances[index])
+            # cCall.SetCtrlPts(controlPointsList[index]) # Tho still unsure of its arg inputs...
         cCall.Create()
         cCall.GetPolyData(polyList[index])
         polyDataList.append(polyList[index])
@@ -326,6 +326,9 @@ def makeContour(newObjectName, modelName):
     useLinearSampleAlongLength = 1
     Geom.LoftSolid(srcList, objName, numSegs, numSegsAlongLength, numLinearSegsAlongLength, numModes, useFFT, useLinearSampleAlongLength)
 
+    # Importing PolyData from solid to repository
+    GUI.ImportPolyDataFromRepos(str(newObjectName))
+
     # Adding caps to model
     VMTKUtils.Cap_with_ids(str(newObjectName),str(modelName),0,0)
 
@@ -345,7 +348,6 @@ def makeContour(newObjectName, modelName):
 
 # Mesh:
 def makeMesh(vtpFile, vtkFile):
-    # Meshing object
     MeshObject.SetKernel('TetGen')
     msh = MeshObject.pyMeshObject()
     msh.NewObject('newMesh')
@@ -354,7 +356,7 @@ def makeMesh(vtpFile, vtkFile):
     msh.NewMesh()
     msh.SetMeshOptions('SurfaceMeshFlag',[1])
     msh.SetMeshOptions('VolumeMeshFlag',[1])
-    msh.SetMeshOptions('GlobalEdgeSize',[0.25])
+    msh.SetMeshOptions('GlobalEdgeSize',[0.08])
     msh.SetMeshOptions('MeshWallFirst',[1])
     msh.GenerateMesh()
     os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Simulations') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
@@ -370,7 +372,7 @@ def makeMesh(vtpFile, vtkFile):
 def runpreSolver(svFile):
     # Running preSolver from created model
     try:
-        os.system('/usr/local/sv/svsolver/2019-01-19/svpre' + str(svFile)) # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+        os.system('/usr/local/sv/svsolver/2019-01-19/svpre' + str(svFile))
         print('Running preSolver')
     except:
         print('Unable to run preSolver')
@@ -400,7 +402,7 @@ def gatherPoints(segFile):
     radiusPoints = radiusData
     return segsData
 
-# Gathering control points to calculate radii for setting control points 
+# Gathering control points to calculate radii for setting control points
 def gatherControlPoints(segFile): # .ctgr file
     try:
         inFile = open(segFile+'.ctgr', 'r')
@@ -450,40 +452,54 @@ import operator
 # for name in objs:
 #     Repository.Delete(name)
 
+# Used for function calls (Change based on desired alterations)
+mainCTGRfile = 'SVC'
+contourGroupToAlter = '2'
+percentStenosis = 50
+svpreFile = 'idealSim2.svpre'
+
+# Defaulted to these below, change if you want
+newPthName = mainCTGRfile + '_copy_Path'
+newSegNAme = mainCTGRfile + '_copy_Segment'
+modelNoCap = mainCTGRfile + '_noCapMod'
+modelWithCap = mainCTGRfile + '_fullMod'
+meshVtp = modelNoCap + '.vtp'
+meshVtk = mainCTGRfile + '_OutFile.vtk'
+
+# No need to change
+stenosisCTGRfile = "None"
+controlPointsList = []
+radiusPoints = []
+pathPoints = []
+
+# Change cwd to SimV Segmentations
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Segmentations') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+print('Current directory: ' + os.getcwd())
 
 # Gathering segment radii
-cp = []
-cp = gatherControlPoints('LPA_main')
+controlPointsList = gatherControlPoints(mainCTGRfile)
 
 # Stenosis function call
 print('Applying stenosis:')
-print('Current directory: ' + os.getcwd())
-ctgrFile = alteringStenosis('LPA_main', 90, '2')
+stenosisCTGRfile = alteringStenosis(mainCTGRfile, percentStenosis, contourGroupToAlter)
 
 # Gathering points from given model
-radiusPoints = []
-print('\nGathering points & making path: \n')
-os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Segmentations') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
-print('Current directory: ' + os.getcwd())
-pathPoints = gatherPoints('LPA_main')
+print('\nGathering points & making path:')
+pathPoints = gatherPoints(stenosisCTGRfile)
 listPathPoints = pathPoints.tolist() # Conversion from numpy array to python list to allow for valid makePath function call
-makePath(listPathPoints, 'LPA_main_copy_Path', 'LPA_main_copy_Segment', 90, '2')
+makePath(listPathPoints, newPthName, newSegNAme, percentStenosis, contourGroupToAlter)
 
-
-# Contour function call
-print('Create new contour:')
+# Change cwd to SimV Models
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
-makeContour('LPA_main_newCont', 'LPA_main_newModel')
+# Contour function call
+print('Create new contour:')
+makeContour(modelNoCap, modelWithCap)
 
+# Mesh function call
+print('Create new mesh:')
+makeMesh(meshVtp, meshVtk)
 
-# # Mesh function call
-# print('Create new mesh:')
-# os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
-# makeMesh('LPA_main_newCont.vtp', 'LPA_main_newContOutFile.vtk')
-
-
-# preSolver function call
+# # preSolver function call
 # print('Running preSolver: \n')
-# runpreSolver('idealSim2.svpre')
+# runpreSolver(svpreFile)
