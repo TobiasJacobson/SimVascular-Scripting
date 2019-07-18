@@ -22,7 +22,11 @@ polyDataList = []
 
 def alteringStenosis(fileName, percentage, contourGroup):
     '''
-
+    Inputs: segment file (ctgr file), desired stenosis (float), contour group to alter (string)
+    This function reads in the information from the given segment file until it reaches the desired contour.
+    It will then alter that specific contours information by applying a stenosis on its contour points by decreasing the
+    overall area of the contour circle by the given percentage and proceed to write the rest of the original file to the
+    new output file. This function will then create a new segment file with the stenosis applied on the given contour.
     '''
     # Check if given file exists in cwd
     try:
@@ -175,7 +179,16 @@ def alteringStenosis(fileName, percentage, contourGroup):
 # Next steps - generate model, mesh and prepare preSolver
 
 # Path
-def makePath(pointsList, newPathName, newContourName, percentage, contour):
+def makePathAndContour(pointsList, newPathName, newContourName, percentage, contour):
+    '''
+    Inputs: Nested list of 3D points, a new path name (string), a new contour name (string), percent stenosis (float), contour (string)
+    This function creates a new path where each path point is in the center of each contour from the given
+    ctgr file used in alteringStenosis. Using the information gathered in alteringStenosis, it then adds
+    a new point to the created path and creates a contour of equal radius with that center. Then importing
+    the path to the GUI. Each set of two control points gathered in gatherControlPoints is later used to calculate the radius of each
+    segment by using the 3 dimensional distance formula. I had to do this because there is, as of June 2019, no python function to generate a model from a
+    ctgr file, so I had to create a replica of the entire object in order to have poly data to then be able to create a model & mesh using python.
+    '''
     # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
     p = Path.pyPath()
 
@@ -266,7 +279,17 @@ def makePath(pointsList, newPathName, newContourName, percentage, contour):
     return
 
 # Model:
-def makeContour(newObjectName, modelName):
+def makeModel(newObjectName, modelName):
+    '''
+    Inputs: a new object name (string), a new model name (string)
+    This function will generate a model using the poly data created in makePathAndContour.
+    The simVascular function Geom.orientProfile requires a set of 3 dimensional points,
+    a set of 3D points tangent to the original points, and a set of 3D points in the plane
+    of the original points. Hence a new set of nested lists are created where tangent and
+    cosine operations are applied to the original set of points. Then using the LoftSolid
+    function it generates a 3D model using the contours from makePathAndContour and imports
+    it to the GUI
+    '''
     numSegs = 120 # Number of segments defaulted to 120
 
     srcList = [] # contains SampleLoop generations
@@ -340,6 +363,12 @@ def makeContour(newObjectName, modelName):
 
 # Mesh:
 def makeMesh(vtpFile, vtkFile):
+    '''
+    Inputs: vtp file name (string), vtk file name (string)
+    Using the dimensions of the model created in makeModel, which is passed as the vtp file
+    to this function (makeMesh). This function will then generate a 3 dimensional mesh and
+    add the new mesh file (vtk file) to the cwd and import the mesh to the GUI.
+    '''
     MeshObject.SetKernel('TetGen')
     msh = MeshObject.pyMeshObject()
     msh.NewObject('newMesh')
@@ -362,6 +391,11 @@ def makeMesh(vtpFile, vtkFile):
 
 # preSolver:
 def runpreSolver(svFile):
+    '''
+    Inputs: svpre file (string)
+    Runs the simvascular preSolver for the given svpre file which will enable running of the simvascular solver
+    and hence post processing of the data.
+    '''
     try:
         os.system('/usr/local/sv/svsolver/2019-01-19/svpre' + str(svFile))
         print('\nRunning preSolver')
@@ -370,7 +404,12 @@ def runpreSolver(svFile):
     return
 
 # Gathering path points from oroginal contour to use for new contour
-def gatherPoints(segFile):
+def gatherCenterPoints(segFile):
+    '''
+    Inputs: contour file (ctgr file)
+    This function extracts the center coordinates for each segment of a given contour file (ctgr file).
+    These colordinates will be used later when creating a new path and new contour.
+    '''
     try:
         inputFile = open(segFile+'.ctgr', 'r')
     except:
@@ -390,7 +429,12 @@ def gatherPoints(segFile):
     return segsData
 
 # Gathering control points to calculate radii for setting control points
-def gatherControlPoints(segFile): # .ctgr file
+def gatherControlPoints(segFile): # argument is ctgr file
+    '''
+    Inputs: contour file (ctgr file)
+    Gathers the control points for each segment of a given contour file (ctgr file).
+    These coordinates will later be used to calculate radii of new segments in contour 
+    '''
     try:
         inFile = open(segFile+'.ctgr', 'r')
         print('File opened succesfully')
@@ -471,16 +515,16 @@ stenosisCTGRfile = alteringStenosis(mainCTGRfile, percentStenosis, contourGroupT
 
 # Gathering points from given model
 print('\nGathering points & making path:')
-pathPoints = gatherPoints(stenosisCTGRfile)
-listPathPoints = pathPoints.tolist() # Conversion from numpy array to python list to allow for valid makePath function call
-makePath(listPathPoints, newPthName, newSegNAme, percentStenosis, contourGroupToAlter)
+pathPoints = gatherCenterPoints(stenosisCTGRfile)
+listPathPoints = pathPoints.tolist() # Conversion from numpy array to python list to allow for valid makePathAndContour function call
+makePathAndContour(listPathPoints, newPthName, newSegNAme, percentStenosis, contourGroupToAlter)
 
 # Change cwd to SimV project --> Models
 os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 print('Current directory: ' + os.getcwd())
 # Contour function call
 print('\nCreating new contour and model:')
-makeContour(modelNoCap, modelWithCap)
+makeModel(modelNoCap, modelWithCap)
 
 # Mesh function call
 print('\nCreating new mesh:')
