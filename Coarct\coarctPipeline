@@ -1,0 +1,162 @@
+# Objective: Generate 'idealized aortic stenosis' or narrowing of the lumen from scratch
+#       (1) Make path based on given poionts
+#       (2) Create contour at each path point of given radius 
+#       (3) Generate model
+# Inputs: List of 3 dimensional path points, List of radii (Equal length to path), New path name, New contour name, New model name
+
+
+#########################################################
+#                  Function Definition                  #
+#########################################################
+def coarctPipeline(pathList, radiusList, pathName, contourName, modelName):
+    # Create path --
+    p = Path.pyPath() # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
+
+    # Initializing path
+    p.NewObject(pathName)
+    print('Path name: ' + pathName)
+
+    # Adding each point from pathList to created path
+    for pathPoint in pathList:
+        p.AddPoint(pathPoint)
+
+    # Adding path to repository
+    p.CreatePath()
+
+    # Importing created path from repository to the 'Paths' tab in GUI
+    GUI.ImportPathFromRepos(pathName,'Paths')
+
+    # Create contour --
+    # Initializing variables and creating segmentations (Defaulted to circle)
+    Contour.SetContourKernel('Circle')
+    pointsLength = len(pathList)
+    numEnd = p.GetPathPtsNum() # index at end of pathList
+    numSec = int((numEnd-1)/(pointsLength-1))
+    polyDataList = []
+
+    # Creating newContourNameList --> going as pathName-ct1, pathName-ct2 etc
+    strs = 1 # Random name for keeping index
+    newContourNameList = []
+    while strs < (pointsLength+1):
+        addString = pathName + 'ct' + str(strs)
+        newContourNameList.append(addString)
+        strs += 1
+
+    # Creating polyDataList --> going as '1ctp', '2ctp' etc
+    strs = 1
+    polyNameList = []
+    while strs < (pointsLength+1):
+        addString = str(strs) + 'ctp'
+        polyNameList.append(addString)
+        strs += 1
+
+    # Creating new contours based on pathList and collecting polyData for modeling
+    index = 0
+    while index < pointsLength:
+        cCall = 'c' + str(index)
+        cCall = Contour.pyContour()
+        cCall.NewObject(newContourNameList[index], pathName, numSec*index)
+        cCall.SetCtrlPtsByRadius(pathList[index], radiusList[index])
+        cCall.Create()
+        cCall.GetPolyData(polyNameList[index])
+        polyDataList.append(polyNameList[index])
+        index += 1
+
+    # Importing contours from repository to 'Segmentations' tab in GUI
+    GUI.ImportContoursFromRepos(contourName, newContourNameList, pathName, 'Segmentations')
+
+    # Generate model --
+    # Initializing variables
+    numSegs = 120 # Number of segments defaulted to 120
+    srcList = [] # contains SampleLoop generations
+
+    # Apply SampleLoop and appending to srcList for each item of polyDataList
+    for item in polyDataList:
+        Geom.SampleLoop(item, numSegs, item+'s')
+        srcList.append(item+'s')
+
+    pointsLen = len(pathList) # Length of listPathPoints
+
+    # Tangent calls
+    t3s = [0, 0, 0]
+    tTot = [None]*pointsLen
+    calls = 0
+    while calls < (pointsLen-1):
+        t3s[0] = math.tan(pathList[calls][0])
+        t3s[1] = math.tan(pathList[calls][1])
+        t3s[2] = math.tan(pathList[calls][2])
+        tTot[calls] = t3s
+        calls += 1
+
+    # Cosine calls
+    c3s = [0, 0, 0]
+    cTot = [None]*pointsLen
+    calls = 0
+    while calls < (pointsLen-1):
+        c3s[0] = math.cos(pathList[calls][0])
+        c3s[1] = math.cos(pathList[calls][1])
+        c3s[2] = math.cos(pathList[calls][2])
+        cTot[calls] = c3s
+        calls += 1
+
+    # Geom.orientProfile('', x y z, tan(x y z), xyz in plane of obj, 'newOrient')
+    # Note: Tan and cos are in degrees, not radians
+    dev = 0 # Used to keep index
+    while dev < (pointsLen-1):
+        st1 = str(dev+1)+'ctps'
+        st2 = 'newOrient'+str(dev+1)
+        Geom.OrientProfile(str(st1), pathList[dev], tTot[dev], cTot[dev], str(st2))
+        dev += 1
+
+    # Creating values to loft solid
+    objName = modelName + '_noCap'
+    numSegsAlongLength = 240
+    numLinearSegsAlongLength = 240
+    numModes = 20
+    useFFT = 0
+    useLinearSampleAlongLength = 1
+    Geom.LoftSolid(srcList, objName, numSegs, numSegsAlongLength, numLinearSegsAlongLength, numModes, useFFT, useLinearSampleAlongLength)
+
+    # Importing PolyData from solid to repository (No cap model)
+    GUI.ImportPolyDataFromRepos(modelName + '_noCap')
+
+    # Adding caps to model (Full cap model)
+    VMTKUtils.Cap_with_ids(modelName + '_noCap', modelName, 0, 0)
+
+    # Shortcut for function call Solid.pySolidModel(), needed when calling SimVascular functions
+    s1 = Solid.pySolidModel()
+
+    # Creating model
+    Solid.SetKernel('PolyData')
+    s1.NewObject('newModel')
+    s1.SetVtkPolyData(modelName)
+    s1.GetBoundaryFaces(90)
+    print("FaceID's found: " + str(s1.GetFaceIds()))
+    s1.WriteNative(os.getcwd() + "/" + 'object' + ".vtp")
+    GUI.ImportPolyDataFromRepos(modelName)
+    return
+
+
+
+############################################
+#                   Main                   #
+############################################
+
+# Importing various repos.
+import os
+from sv import *
+import sys
+import numpy
+from numpy import genfromtxt
+import pdb
+import re
+import math
+import os.path
+import operator
+
+pthList = [[0,0,0],[5,0,0],[10,0,0],[16,0,0],[20,0,0],[24,0,0],[30,0,0],[35,0,0],[40,0,0]]
+radList = [2,2,2,2,.8,2.7,3,3,3]
+pthName = 'coarct_path'
+cName = 'coarct_contour'
+modName = 'coarct_model'
+coarctPipeline(pthList, radList, pthName, cName, modName)
