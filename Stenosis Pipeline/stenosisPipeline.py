@@ -174,7 +174,7 @@ def alteringStenosis(fileName, percentage, contourGroup):
     inFile.close()
     outFile.close()
     return fileName+'-'+str(contourGroup)+'-'+str(percentage)
-     # End of function alteringStenosis(str, int, str)
+# End of function alteringStenosis(str, int, str)
 
 # Next steps - generate model, mesh and prepare preSolver
 
@@ -277,6 +277,8 @@ def makePathAndContour(pointsList, newPathName, newContourName, percentage, cont
     # Importing contours from repository to 'Segmentations' tab in GUI
     GUI.ImportContoursFromRepos(newContourName, newContourNameList, newPathName, 'Segmentations')
     return
+# end of makePathAndContour
+
 
 # Model:
 def makeModel(newObjectName, modelName):
@@ -360,9 +362,11 @@ def makeModel(newObjectName, modelName):
     s1.WriteNative(os.getcwd() + "/" + str(newObjectName) + ".vtp")
     GUI.ImportPolyDataFromRepos(str(modelName))
     return
+# end of makeModel
+
 
 # Mesh:
-def makeMesh(vtpFile, vtkFile):
+def makeMesh(vtpFile, vtkFile, meshSize):
     '''
     Inputs: vtp file name (string), vtk file name (string)
     Using the dimensions of the model created in makeModel, which is passed as the vtp file
@@ -377,7 +381,7 @@ def makeMesh(vtpFile, vtkFile):
     msh.NewMesh()
     msh.SetMeshOptions('SurfaceMeshFlag',[1])
     msh.SetMeshOptions('VolumeMeshFlag',[1])
-    msh.SetMeshOptions('GlobalEdgeSize',[0.08])
+    msh.SetMeshOptions('GlobalEdgeSize',[meshSize])
     msh.SetMeshOptions('MeshWallFirst',[1])
     msh.GenerateMesh()
     os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Simulations') # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
@@ -388,6 +392,8 @@ def makeMesh(vtpFile, vtkFile):
     GUI.ImportUnstructedGridFromRepos('Mesh')
     print('Mesh generated')
     return
+# end of makeMesh
+
 
 # preSolver:
 def runpreSolver(svFile):
@@ -402,6 +408,8 @@ def runpreSolver(svFile):
     except:
         print('\nUnable to run preSolver')
     return
+# end of runpreSolver
+
 
 # Gathering path points from oroginal contour to use for new contour
 def gatherCenterPoints(segFile):
@@ -427,13 +435,15 @@ def gatherCenterPoints(segFile):
     segsData = numpy.array(segsData)
     segsData = segsData.astype(numpy.float)
     return segsData
+# end of gatherCenterPoints
+
 
 # Gathering control points to calculate radii for setting control points
 def gatherControlPoints(segFile): # argument is ctgr file
     '''
     Inputs: contour file (ctgr file)
     Gathers the control points for each segment of a given contour file (ctgr file).
-    These coordinates will later be used to calculate radii of new segments in contour 
+    These coordinates will later be used to calculate radii of new segments in contour
     '''
     try:
         inFile = open(segFile+'.ctgr', 'r')
@@ -461,6 +471,11 @@ def gatherControlPoints(segFile): # argument is ctgr file
     controlPoints = controlPoints[:,1:]
     return controlPoints
 
+# end of gatherControlPoints
+
+def Union():
+    os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models')
+    Geom.Union('SVC', 'LPA_main','Models')
 ####################################################
 #                   Main                           #
 ####################################################
@@ -477,6 +492,11 @@ import math
 import os.path
 import operator
 
+import autoDoc
+
+listOfFunctions = [alteringStenosis, makePathAndContour, makeMesh, makeModel]
+autoDoc.aDoc(listOfFunctions)
+
 # # Clearing repository (Still no way to remove from GUI tho so I still have issues, but Fanwei is addressing this)
 # objs = Repository.List()
 # for name in objs:
@@ -485,7 +505,8 @@ import operator
 # ------- Change based on desired alterations ------- #
 mainCTGRfile = 'SVC'
 contourGroupToAlter = '2'
-percentStenosis = 50
+percentStenosis = 90
+meshSize = 0.08
 svpreFile = 'idealSim2.svpre'
 # --------------------------------------------------- #
 
@@ -494,7 +515,7 @@ newPthName = mainCTGRfile + '_copy_Path'
 newSegNAme = mainCTGRfile + '_copy_Segment'
 modelNoCap = mainCTGRfile + '_noCapMod'
 modelWithCap = mainCTGRfile + '_fullMod'
-meshVtp = modelNoCap + '.vtp'
+meshVtp = contourGroupToAlter + '_' + str(percentStenosis) + '_' + modelNoCap + '.vtp'
 meshVtk = mainCTGRfile + '_OutFile.vtk'
 
 # Various variables needed
@@ -524,11 +545,13 @@ os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models') # <><><><><>
 print('Current directory: ' + os.getcwd())
 # Contour function call
 print('\nCreating new contour and model:')
-makeModel(modelNoCap, modelWithCap)
+makeModel(contourGroupToAlter + '_' + str(percentStenosis) + '_' + modelNoCap, contourGroupToAlter + '_' + str(percentStenosis) + '_' + modelWithCap)
+
+# Union()
 
 # Mesh function call
 print('\nCreating new mesh:')
-makeMesh(meshVtp, meshVtk)
+makeMesh(meshVtp, meshVtk, meshSize)
 
-# preSolver function call
-runpreSolver(svpreFile)
+# # preSolver function call
+# runpreSolver(svpreFile)
