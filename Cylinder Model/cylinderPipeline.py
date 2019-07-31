@@ -1,9 +1,7 @@
-# Objective: Generate simVascular paths, segmentations, lofts, meshes, and run preSolver, solver and post process data in a user friendly and efficient manner
+# Objective: Generate simVascular paths, segmentations, models, meshes, and run preSolver, solver and post process data in a user friendly and efficient manner
 #   -This will include boundary conditions (For now assume steady flow file)
 # Application(s): Cylindrical Models with set boundary conditions (For Now)
 
-### NOTES:
-    # Contour type? How to take in levelSet, splinePoly, or Polygon selections?
 
 #####################################################
 #                     Func Def                      #
@@ -34,15 +32,14 @@ def makePath(pointsList, pathName, contourName, radius):
     pointsLength = len(pointsList)
     contourNameList = [pathName + 'ct1', pathName + 'ct2']
 
-    #  Shortcut for function call Contour.pyContour(), needed when calling SimVascular functions
-    c = Contour.pyContour()
-
-    # Creating 2 control segmentations for caps of the cylinder
+    # Creating 2 control segmentations for caps of the cylinder --
+    # Segment #1
+    c = Contour.pyContour() #  Shortcut for function call Contour.pyContour(), needed when calling SimVascular functions
     c.NewObject(contourNameList[0], pathName, 0)
     c.SetCtrlPtsByRadius(pointsList[0], radius+1)
     c.Create()
     c.GetPolyData('1ctp')
-
+    # Segment #2
     numTwo = p.GetPathPtsNum() # index at end of pointsList
     c2 = Contour.pyContour()
     c2.NewObject(contourNameList[1], pathName, numTwo-1)
@@ -54,9 +51,11 @@ def makePath(pointsList, pathName, contourName, radius):
     GUI.ImportContoursFromRepos(contourName, contourNameList, pathName, 'Segmentations')
 
     return
+# end of makePath
+
 
 # Function to create contour
-def makeContour(pointsList, pathName, contourName, radius):
+def makeContour():
     # Creating data to loft solid
     numSegs = 60 # number of segments defaulted to 60
     Geom.SampleLoop('1ctp', numSegs, '1ctps')
@@ -97,6 +96,8 @@ def makeContour(pointsList, pathName, contourName, radius):
     s1.WriteNative(os.getcwd() + "/cylinder.vtp")
     GUI.ImportPolyDataFromRepos('fullLoft')
     print('Caps added to fullLoft')
+# end of makeContour
+
 
 # Function to generate mesh of model
 def makeMesh():
@@ -118,8 +119,11 @@ def makeMesh():
     Repository.WriteVtkUnstructuredGrid("Mesh","ascii",fileName)
     GUI.ImportUnstructedGridFromRepos('Mesh')
     print('Mesh generated')
+# end of makeMesh
 
-# Function to run solver, preSolver, and post process data
+
+# Function to run preSolver, solver, and begin post processing data
+# Note!!!: preSolver, svsolver, and svpost function calls are unique to my system. Change them to reflect where they are stored on your system.
 def runSPP():
     # Running preSolver from created model
     try:
@@ -139,6 +143,8 @@ def runSPP():
         print('Post processing data')
     except:
         print('Unable to post process data')
+    return
+# end of runSPP
 
 
 #####################################################
@@ -150,7 +156,7 @@ import os
 from sv import *
 
 # Moving from root directory to directory of fileName.py
-os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim')
+os.chdir('/Users/tobiasjacobson/Documents/Atom/preScripting/cylTest/Simulations/cylSim') ########### Unique to my system. Change it to reflect where it is stored on your system.
 print('Current directory: ' + os.getcwd())
 
 # Declaring list of points to be used for path
@@ -159,7 +165,7 @@ listOfPoints = [[0.0,0.0,0.0],[10.0,10.0,10.0]]
 # Creating path using makePath() function
 makePath(listOfPoints, 'path1', 'segment1', 1.0)
 # Creating contour using makeContour() function
-makeContour(listOfPoints, 'path1', 'segment1', 1.0 )
+makeContour()
 # Creating mesh using makeMesh() function
 makeMesh()
 # Running solver, preSolver, and post process the data
