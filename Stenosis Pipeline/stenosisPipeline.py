@@ -3,15 +3,22 @@
 #           (2) Generate a new model based on applied stenosis
 #           (3) Generate a new mesh based on new model
 #           (4) Run presolver
-# Inputs: .ctgr file, percent stenosis, contour group to apply stenosis
+
+# Function calls and inputs ---
+# alteringStenosis inputs: .ctgr file, percent stenosis, contour group to apply stenosis
+# makePathAndContour inputs: list of path points, a new path name, a new contour name, the percent stenosis, and the contour group
+# makeModel inputs: a new object name, a new model name
+# makeMesh inputs: a new vtp file name, the models vtk file name, global edge size for meshing
+# runpreSolver input: the svpreFile
+# gatherCenterPoints input: the segmentation file without stenosis applied
+# gatherControlPoints input: the segmentation file without stenosis applied
+# Union inputs: N/A (yet)
+
 
 ### NOTES ###
-# Change the directory path to location of files on your computer for any line containing # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+# Change the directory path to location of files on your system for any line containing # <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 # Couldn't change 3D path point size (sorry they're so big)
-# For more detailed mesh, change 'GlobalEdgeSize, [x]' in makeMesh function
 
-### REMAINING ISSUES ###
-# Contour 0 is slightly shifted, not sure how to fix or why it occurs but doesn't largely effect model, mesh, or unification
 
 # Global list needed for more than one function call (Hence made global)
 polyDataList = []
@@ -83,7 +90,9 @@ def alteringStenosis(fileName, percentage, contourGroup):
         else:
             pointsData.append(re.findall('"([^"]*)"', iteration))  # '^' signifies start of string, '*' RE matches 0 or more (ab* will match 'a','ab' or 'abn'
                                                                    # where n is n number of b's following), [] indicates a set of special characters
-    ct = int(pointsData[-1][0]) # Hmm... Yeah not really sure -- Ask Erica
+
+    # Hmm... Yeah not really sure -- Ask Erica in CBCL Lab
+    ct = int(pointsData[-1][0])
 
     # Takes the actual integers from segment to alter and copies them to list: pointsData
     count = 0
@@ -176,7 +185,8 @@ def alteringStenosis(fileName, percentage, contourGroup):
     return fileName+'-'+str(contourGroup)+'-'+str(percentage)
 # End of function alteringStenosis(str, int, str)
 
-# Next steps - generate model, mesh and prepare preSolver
+
+# Next steps - generate path, model, mesh and prepare preSolver
 
 # Path
 def makePathAndContour(pointsList, newPathName, newContourName, percentage, contour):
@@ -187,7 +197,7 @@ def makePathAndContour(pointsList, newPathName, newContourName, percentage, cont
     a new point to the created path and creates a contour of equal radius with that center. Then importing
     the path to the GUI. Each set of two control points gathered in gatherControlPoints is later used to calculate the radius of each
     segment by using the 3 dimensional distance formula. I had to do this because there is, as of June 2019, no python function to generate a model from a
-    ctgr file, so I had to create a replica of the entire object in order to have poly data to then be able to create a model & mesh using python.
+    ctgr file in simVascular, so I had to create a replica of the entire object in order to have poly data to then be able to create a model & mesh using the python interface.
     '''
     # Shortcut for function call Path.pyPath(), needed when calling SimVascular functions
     p = Path.pyPath()
@@ -285,7 +295,7 @@ def makeModel(newObjectName, modelName):
     '''
     Inputs: a new object name (string), a new model name (string)
     This function will generate a model using the poly data created in makePathAndContour.
-    The simVascular function Geom.orientProfile requires a set of 3 dimensional points,
+    The simVascular function Geom.orientProfile requires a set of 3D points,
     a set of 3D points tangent to the original points, and a set of 3D points in the plane
     of the original points. Hence a new set of nested lists are created where tangent and
     cosine operations are applied to the original set of points. Then using the LoftSolid
@@ -415,8 +425,8 @@ def runpreSolver(svFile):
 def gatherCenterPoints(segFile):
     '''
     Inputs: contour file (ctgr file)
-    This function extracts the center coordinates for each segment of a given contour file (ctgr file).
-    These colordinates will be used later when creating a new path and new contour.
+    This function extracts the center coordinates for each segment of a given segmentation file (ctgr file).
+    These coordinates will be used later when creating a new path and new contour.
     '''
     try:
         inputFile = open(segFile+'.ctgr', 'r')
@@ -442,7 +452,7 @@ def gatherCenterPoints(segFile):
 def gatherControlPoints(segFile): # argument is ctgr file
     '''
     Inputs: contour file (ctgr file)
-    Gathers the control points for each segment of a given contour file (ctgr file).
+    Gathers the control points for each segment of a given segmentation file (ctgr file).
     These coordinates will later be used to calculate radii of new segments in contour
     '''
     try:
@@ -470,12 +480,14 @@ def gatherControlPoints(segFile): # argument is ctgr file
     controlPoints = controlPoints.astype(numpy.float)
     controlPoints = controlPoints[:,1:]
     return controlPoints
-
 # end of gatherControlPoints
 
-def Union():
+def Union(): # As of June 31, 2019 this hasn't been implemented in the open source version of simVascular yet
     os.chdir('/Users/tobiasjacobson/Documents/Atom/genStenosis/Models')
     Geom.Union('SVC', 'LPA_main','Models')
+# end of union
+
+
 ####################################################
 #                   Main                           #
 ####################################################
@@ -492,15 +504,11 @@ import math
 import os.path
 import operator
 
-import autoDoc
+import autoDoc # autoDoc being the name of my file containing function to extract docStrings
 
+# Function call to extract all docStrings and create docStrings.txt in your cwd
 listOfFunctions = [alteringStenosis, makePathAndContour, makeMesh, makeModel]
 autoDoc.aDoc(listOfFunctions)
-
-# # Clearing repository (Still no way to remove from GUI tho so I still have issues, but Fanwei is addressing this)
-# objs = Repository.List()
-# for name in objs:
-#     Repository.Delete(name)
 
 # ------- Change based on desired alterations ------- #
 mainCTGRfile = 'SVC'
@@ -547,11 +555,12 @@ print('Current directory: ' + os.getcwd())
 print('\nCreating new contour and model:')
 makeModel(contourGroupToAlter + '_' + str(percentStenosis) + '_' + modelNoCap, contourGroupToAlter + '_' + str(percentStenosis) + '_' + modelWithCap)
 
+# Not yet fully implemented... sorry for the inconvenience
 # Union()
 
 # Mesh function call
 print('\nCreating new mesh:')
 makeMesh(meshVtp, meshVtk, meshSize)
 
-# # preSolver function call
-# runpreSolver(svpreFile)
+# preSolver function call
+runpreSolver(svpreFile)
