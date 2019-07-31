@@ -1,4 +1,4 @@
-# Objective: Write a function to extract docstrings from a given python function and output them in a new pdf file
+# Objective: Write a function to extract docstrings from a given python function and output them in a new txt file
 
 def aDoc(ListFuncNames):
     f = open("docStrings.txt","w+") # Creates new file
