@@ -1,4 +1,4 @@
-# Objective: Generate 'idealized aortic stenosis' or narrowing of the lumen from scratch
+# Objective: Generate 'idealized aortic stenosis' or narrowing of the lumen from scratch given:
 #       (1) A list of 3 dimensional path points
 #       (2) A list of radii of equal length
 # Inputs: List of 3 dimensional path points, List of radii (Equal length to path), New path name, New contour name, New model name
@@ -66,7 +66,7 @@ def coarctPipeline(pathList, radiusList, pathName, contourName, modelName):
 
     # Generate model --
     # Initializing variables
-    numSegs = 120 # Number of segments defaulted to 120
+    numSegs = 120 # Number of segments defaulted to 120, increase to make model smoother
     srcList = [] # contains SampleLoop generations
 
     # Apply SampleLoop and appending to srcList for each item of polyDataList
@@ -152,6 +152,7 @@ import math
 import os.path
 import operator
 
+# # Not been implemented in open source version yet
 # GUI.RemoveDataNode('t1_path', 'Paths')
 # GUI.RemoveDataNode('t2_path', 'Paths')
 # GUI.RemoveDataNode('t1_contour', 'Segmentations')
@@ -159,6 +160,7 @@ import operator
 # GUI.RemoveDataNode('t1_model', 'Models')
 # GUI.RemoveDataNode('t2_model', 'Models')
 
+# Test call #1
 pthList = [[-10,0,0],[-5,0,0],[0,0,0],[5,0,0],[10,0,0]]
 radList = [1,1,1,1,1]
 name = 't1'
@@ -172,6 +174,7 @@ objs = Repository.List()
 for name in objs:
     Repository.Delete(name)
 
+# Test call #2
 pthList = [[0,-10,0],[0,-5,0],[0,0,0],[0,5,0],[0,10,0]]
 radList = [1,1,1,1,1]
 name = 't2'
