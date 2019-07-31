@@ -182,4 +182,3 @@ pthName = name + '_path'
 cName = name + '_contour'
 modName = name + '_model'
 coarctPipeline(pthList, radList, pthName, cName, modName)
-
